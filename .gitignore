@@ -1,0 +1,26 @@
+# Dependencias
+node_modules/
+.expo/
+.expo-shared/
+
+# Entorno (nunca subir credenciales)
+.env
+*.local
+google-services.json
+GoogleService-Info.plist
+
+# Build outputs
+dist/
+build/
+.next/
+
+# Editor y sistema
+.DS_Store
+*.log
+.vscode/
+.idea/
+Thumbs.db
+
+# Expo
+*.orig.*
+web-build/
