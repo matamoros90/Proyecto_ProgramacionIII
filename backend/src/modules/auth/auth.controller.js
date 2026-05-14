@@ -13,7 +13,12 @@ async function getProfile(req, res, next) {
 
 async function registerProfile(req, res, next) {
   try {
-    const { displayName, email } = req.body;
+    const displayName = String(req.body.displayName ?? '').trim().slice(0, 100);
+    const email = String(req.body.email ?? '').trim().toLowerCase().slice(0, 254);
+
+    if (!displayName) return sendError(res, 400, 'El nombre es requerido');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return sendError(res, 400, 'Email inválido');
+
     const existing = await authService.getUserProfile(req.user.uid);
     if (existing) return sendSuccess(res, existing, 'Perfil ya existe');
 
