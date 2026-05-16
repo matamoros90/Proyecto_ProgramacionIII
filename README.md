@@ -27,7 +27,7 @@ ZonaPcBuilder/
 ### Backend
 ```bash
 cd backend
-npm install
+npm ci
 cp .env.example .env   # Configurar variables de entorno
 npm run dev
 ```
@@ -35,7 +35,7 @@ npm run dev
 ### Mobile
 ```bash
 cd mobile
-npm install
+npm ci
 npx expo start
 ```
 

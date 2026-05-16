@@ -4,7 +4,7 @@
 
 1. **Instalar dependencias**
 ```bash
-npm install
+npm ci
 ```
 
 2. **Configurar variables de entorno**

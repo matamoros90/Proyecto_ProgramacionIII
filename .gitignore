@@ -8,6 +8,7 @@ node_modules/
 *.local
 google-services.json
 GoogleService-Info.plist
+*-firebase-adminsdk-*.json
 
 # Build outputs
 dist/
