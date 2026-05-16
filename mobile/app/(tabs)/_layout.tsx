@@ -1,7 +1,5 @@
-import { useEffect } from 'react';
-import { Tabs, router } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../hooks/useAuth';
 import { Colors } from '../../constants/colors';
 
 function TabIcon({ name, color, size }: { name: any; color: string; size: number }) {
@@ -9,13 +7,6 @@ function TabIcon({ name, color, size }: { name: any; color: string; size: number
 }
 
 export default function TabsLayout() {
-  const { isAuthenticated, isInitialized } = useAuth();
-
-  useEffect(() => {
-    if (isInitialized && !isAuthenticated) {
-      router.replace('/(auth)/login');
-    }
-  }, [isAuthenticated, isInitialized]);
 
   return (
     <Tabs

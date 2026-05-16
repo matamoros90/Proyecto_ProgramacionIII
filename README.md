@@ -106,6 +106,63 @@ minutos por un investigador externo.
 
 ---
 
+## Actualización — 16 de Mayo 2026
+
+### Correcciones de estabilidad y configuración
+
+| Cambio | Archivos | Detalle |
+|--------|----------|---------|
+| **Firebase Auth corregido para React Native** | `mobile/services/firebase.config.ts`, `mobile/metro.config.js` | Metro no resolvía la exportación `react-native` de `@firebase/auth`, causando que `getReactNativePersistence` fuera `undefined`. Se agregó `metro.config.js` con `unstable_conditionNames` para forzar la resolución correcta |
+| **react-navigation actualizado a v7** | `mobile/package.json` | `@react-navigation/native` estaba fijado en `^6.1.9` pero `expo-router@6` requiere v7. La incompatibilidad causaba crash por `PreventRemoveContext` inexistente |
+| **Arquitectura de auth centralizada** | `mobile/app/_layout.tsx`, `mobile/app/(auth)/_layout.tsx`, `mobile/app/(tabs)/_layout.tsx`, `mobile/hooks/useAuth.ts` | El listener de `onAuthStateChanged` se movió al root layout. Los sub-layouts ya no duplican lógica de auth ni declaran rutas inexistentes (`forgot-password`) |
+| **API conecta al backend desde dispositivo** | `mobile/services/api.ts` | Se reemplazó `localhost:3000` por detección automática de IP del host via `expo-constants`, con fallback a IP local para modo tunnel |
+| **Backend escucha en todas las interfaces** | `backend/src/server.js` | Cambiado de `listen(PORT)` a `listen(PORT, '0.0.0.0')` para aceptar conexiones desde dispositivos en la red local |
+| **Tunnel habilitado para testing remoto** | `mobile/package.json` | Agregado `@expo/ngrok` como dependencia para `npx expo start --tunnel` |
+
+### Levantar el proyecto para desarrollo
+
+```bash
+# Terminal 1 — Backend
+cd backend
+cp .env.example .env       # Configurar credenciales Firebase Admin SDK
+npm ci
+npm run dev                # Corre en http://0.0.0.0:3000
+
+# Terminal 2 — Mobile (con tunnel para compartir)
+cd mobile
+npm ci
+npx expo start --tunnel    # Genera URL compartible para Expo Go
+```
+
+> **Nota:** El tunnel permite que cualquier dispositivo cargue la app via
+> Expo Go sin estar en la misma red. Sin embargo, las llamadas al API
+> backend van directo a la IP local del desarrollador, por lo que los
+> testers deben estar en la misma red WiFi o el backend debe estar
+> desplegado en un servidor cloud.
+
+### Guía para futuras modificaciones
+
+1. **Agregar nuevas pantallas:** Crear el archivo en `mobile/app/` siguiendo
+   la convención de expo-router (file-based routing) y registrarla en
+   `mobile/app/_layout.tsx` como `<Stack.Screen name="ruta/archivo" />`
+
+2. **Dependencias npm:** Usar siempre versiones fijadas sin `^` para
+   dependencias críticas. Instalar con `npm ci` (no `npm install`).
+   Verificar en https://socket.dev antes de agregar paquetes nuevos
+
+3. **Variables de entorno:** Nunca commitear `.env`. Agregar nuevas
+   variables a `.env.example` con valores placeholder
+
+4. **Credenciales Firebase:** Los archivos `google-services.json` y
+   `*-firebase-adminsdk-*.json` están en `.gitignore`. Cada desarrollador
+   debe descargar los suyos desde Firebase Console
+
+5. **Cambios en la IP de desarrollo:** Si cambia la red WiFi, actualizar
+   la IP fallback en `mobile/services/api.ts` y `ALLOWED_ORIGINS` en
+   `backend/.env`
+
+---
+
 ## Documentación
 
 - [Arquitectura del Backend](backend/README.md)

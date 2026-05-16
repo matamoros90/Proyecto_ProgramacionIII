@@ -1,30 +1,27 @@
 import { useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../services/firebase.config';
 import { useAuthStore } from '../stores/authStore';
 import api from '../services/api';
 
 export function useAuth() {
-  const { firebaseUser, profile, isLoading, isInitialized, setFirebaseUser, setProfile, setInitialized } =
+  const { firebaseUser, profile, isLoading, isInitialized, setProfile } =
     useAuthStore();
 
+  // Cargar perfil del backend cuando hay usuario autenticado
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setFirebaseUser(user);
-      if (user) {
-        try {
-          const res = await api.get('/auth/profile');
-          setProfile(res.data);
-        } catch {
-          setProfile(null);
-        }
-      } else {
-        setProfile(null);
-      }
-      setInitialized(true);
-    });
-    return unsubscribe;
-  }, []);
+    if (!firebaseUser) {
+      setProfile(null);
+      return;
+    }
+    let cancelled = false;
+    api.get('/auth/profile')
+      .then((res: any) => {
+        if (!cancelled) setProfile(res.data ?? res);
+      })
+      .catch(() => {
+        if (!cancelled) setProfile(null);
+      });
+    return () => { cancelled = true; };
+  }, [firebaseUser]);
 
   return {
     user: firebaseUser,

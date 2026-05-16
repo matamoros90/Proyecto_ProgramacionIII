@@ -8,7 +8,7 @@ initFirebase();
 
 const app = createApp();
 
-app.listen(PORT, () => {
-  console.log(`🚀 ZonaPc Builder API corriendo en http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 ZonaPc Builder API corriendo en http://0.0.0.0:${PORT}`);
   console.log(`📋 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
