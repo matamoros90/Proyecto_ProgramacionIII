@@ -21,7 +21,8 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Inicializar Auth con persistencia AsyncStorage para React Native
 // getAuth() reutiliza si ya fue inicializado (hot reload)
-let auth;
+// eslint-disable-next-line prefer-const
+let auth: ReturnType<typeof getAuth>; // initialized below
 try {
   auth = initializeAuth(app, {
     persistence: getReactNativePersistence(AsyncStorage),

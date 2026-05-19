@@ -163,6 +163,71 @@ npx expo start --tunnel    # Genera URL compartible para Expo Go
 
 ---
 
+## Actualización — 18 de Mayo 2026
+
+### Nuevas funcionalidades implementadas
+
+| Cambio | Archivos | Detalle |
+|--------|----------|---------|
+| **Pantalla de selección de componentes** | `mobile/app/builder/[type].tsx` | Nueva pantalla dinámica que resuelve el error "Unmatched Route" al tocar cualquier slot en el Armado Personalizado. Muestra lista filtrable con imagen, marca, specs y precio de cada componente. Valida compatibilidad en tiempo real al seleccionar |
+| **IP del API corregida** | `mobile/services/api.ts` | Fallback de IP local actualizado. Si cambias de red WiFi, editar la línea 14 con tu IP actual (ver sección "Cambio de red" más abajo) |
+| **Tipo TypeScript de `auth`** | `mobile/services/firebase.config.ts` | Corregido error de tipo implícito `any` en la variable `auth` usando `ReturnType<typeof getAuth>` |
+| **EAS + expo-updates** | `mobile/app.json`, `mobile/package.json` | Configuración de EAS Build y OTA updates añadida al proyecto |
+
+### Scripts de datos iniciales (seed)
+
+El proyecto incluye dos scripts para poblar la base de datos. Solo se deben correr **una vez** al configurar el proyecto por primera vez:
+
+```bash
+cd backend
+
+# 1. Cargar los 43 componentes de hardware en Firestore
+node seed-components.js
+
+# 2. Crear el usuario administrador en Firebase Auth
+node seed-admin.js
+```
+
+**Credenciales del administrador:**
+
+| Campo | Valor |
+|-------|-------|
+| Email | `admin@zonapc.gt` |
+| Contraseña | `Admin1234` |
+
+> Los scripts requieren que el archivo `.env` esté configurado con las credenciales del Firebase Admin SDK.
+
+### Componentes cargados en Firestore
+
+| Tipo | Cantidad | Ejemplos |
+|------|----------|---------|
+| CPU | 5 | Ryzen 5 7600X, i7-13700K, Ryzen 3 5300G |
+| GPU | 5 | RTX 4060, RTX 4070, RX 7600, RTX 4090 |
+| RAM | 5 | DDR4 8/16/32GB, DDR5 16/32GB |
+| Motherboard | 4 | AM4, AM5, LGA1700 (ATX y mATX) |
+| Fuente | 5 | 450W a 1000W, Bronze/Gold |
+| Almacenamiento | 5 | NVMe, SATA SSD, HDD hasta 2TB |
+| Gabinete | 5 | Mini/Mid/Full Tower |
+| Enfriamiento | 5 | Aire y líquido (AIO) |
+| Periféricos | 4 | Monitor, teclado+mouse, headset |
+
+### Cambio de red WiFi
+
+Si un desarrollador cambia de red WiFi, la IP del backend cambia. Actualizar en dos lugares:
+
+```bash
+# 1. Obtener la nueva IP de tu Mac
+ipconfig getifaddr en0
+
+# 2. Editar mobile/services/api.ts línea 14
+return 'TU_NUEVA_IP'; // IP local fallback
+
+# 3. Editar backend/.env
+ALLOWED_ORIGINS=http://localhost:8081,http://TU_NUEVA_IP:8081,http://TU_NUEVA_IP:3000
+```
+
+---
+
 ## Documentación
 
 - [Arquitectura del Backend](backend/README.md)
