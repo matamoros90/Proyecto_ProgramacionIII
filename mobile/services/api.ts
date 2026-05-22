@@ -11,7 +11,7 @@ function getDevHost(): string {
     // Si es un dominio de tunnel, no sirve para el backend local
     if (!host.includes('.')) return host; // es una IP
   }
-  return '192.168.1.23'; // IP local fallback
+  return '192.168.1.17'; // IP local fallback
 }
 
 const BASE_URL = __DEV__

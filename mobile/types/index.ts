@@ -114,17 +114,29 @@ export interface RecommendationResult {
 
 // ─── Cotizaciones ─────────────────────────────────────────────────────────────
 
+export type QuoteStatus =
+  | 'draft' | 'confirmed' | 'in_review' | 'ready'
+  | 'accepted' | 'payment_submitted' | 'payment_verified' | 'rejected';
+
 export interface Quote {
   id: string;
   userId: string;
+  vendorId?: string;
   build: Build;
   totalPrice: number;
   category: PcCategory;
   notes: string;
-  status: 'draft' | 'confirmed';
+  status: QuoteStatus;
+  deliveryAddress?: string;
+  deliveryDepartment?: string;
+  paymentMethod?: 'card' | 'bank_transfer';
+  paymentData?: { last4?: string; bankRef?: string };
   createdAt: string;
   expiresAt: string;
   confirmedAt?: string;
+  acceptedAt?: string;
+  paymentSubmittedAt?: string;
+  paymentVerifiedAt?: string;
 }
 
 // ─── Órdenes de Ensamblaje ────────────────────────────────────────────────────
@@ -161,8 +173,9 @@ export interface User {
   uid: string;
   email: string;
   displayName: string;
-  role: 'client' | 'admin' | 'technician';
+  role: 'client' | 'admin' | 'vendor' | 'technician';
   fcmTokens: string[];
+  address?: string;
   createdAt: string;
 }
 

@@ -39,4 +39,22 @@ async function setAdminRole(uid) {
   await getDb().collection('users').doc(uid).update({ role: 'admin' });
 }
 
-module.exports = { getUserProfile, createUserProfile, updateFcmToken, setAdminRole };
+async function setVendorRole(uid) {
+  await getAuth().setCustomUserClaims(uid, { vendor: true });
+  await getDb().collection('users').doc(uid).update({ role: 'vendor' });
+}
+
+async function listVendors() {
+  const snapshot = await getDb().collection('users').where('role', '==', 'vendor').get();
+  return snapshot.docs.map(d => ({ uid: d.id, ...d.data() }));
+}
+
+async function updateUserProfile(uid, updates) {
+  const allowed = {};
+  if (updates.displayName) allowed.displayName = String(updates.displayName).trim().slice(0, 100);
+  if (updates.address !== undefined) allowed.address = String(updates.address ?? '').trim().slice(0, 200);
+  if (Object.keys(allowed).length === 0) return;
+  await getDb().collection('users').doc(uid).update(allowed);
+}
+
+module.exports = { getUserProfile, createUserProfile, updateFcmToken, setAdminRole, setVendorRole, listVendors, updateUserProfile };

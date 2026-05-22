@@ -2,6 +2,7 @@ const { sendSuccess, sendError } = require('../../shared/utils/response.util');
 const ordersService = require('../orders/orders.service');
 const quotesService = require('../quotes/quotes.service');
 const componentsService = require('../components/components.service');
+const authService = require('../auth/auth.service');
 const { ORDER_STATES } = require('../../shared/constants/order-states');
 
 async function getDashboard(req, res, next) {
@@ -20,10 +21,14 @@ async function getDashboard(req, res, next) {
       .filter(o => o.state === ORDER_STATES.DELIVERED)
       .reduce((sum, o) => sum + (o.totalPrice || 0), 0);
 
+    const totalRevenueAll = allOrders
+      .filter(o => o.state !== ORDER_STATES.CANCELLED)
+      .reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+
     sendSuccess(res, {
       orders: { total: allOrders.length, byState: statsByState },
       quotes: { total: allQuotes.length },
-      revenue: { total: totalRevenue },
+      revenue: { total: totalRevenue, totalAll: totalRevenueAll },
     });
   } catch (err) { next(err); }
 }
@@ -73,4 +78,11 @@ async function getInventory(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { getDashboard, listOrders, updateOrderState, assignTechnician, listQuotes, getInventory };
+async function listVendors(req, res, next) {
+  try {
+    const vendors = await authService.listVendors();
+    sendSuccess(res, vendors);
+  } catch (err) { next(err); }
+}
+
+module.exports = { getDashboard, listOrders, updateOrderState, assignTechnician, listQuotes, getInventory, listVendors };

@@ -1,6 +1,18 @@
 const { sendSuccess, sendError } = require('../../shared/utils/response.util');
 const authService = require('./auth.service');
 
+async function updateProfile(req, res, next) {
+  try {
+    const { displayName, address } = req.body;
+    if (!displayName && address === undefined) return sendError(res, 400, 'Nada que actualizar');
+    await authService.updateUserProfile(req.user.uid, { displayName, address });
+    const updated = await authService.getUserProfile(req.user.uid);
+    sendSuccess(res, updated, 'Perfil actualizado');
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function getProfile(req, res, next) {
   try {
     const profile = await authService.getUserProfile(req.user.uid);
@@ -40,4 +52,4 @@ async function saveFcmToken(req, res, next) {
   }
 }
 
-module.exports = { getProfile, registerProfile, saveFcmToken };
+module.exports = { getProfile, registerProfile, saveFcmToken, updateProfile };

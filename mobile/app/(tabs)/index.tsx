@@ -25,7 +25,9 @@ const QUICK_ACTIONS = [
 ];
 
 export default function HomeScreen() {
-  const { profile } = useAuth();
+  const { profile, isAdmin, isVendor } = useAuth();
+
+  const firstName = profile?.displayName?.split(' ')[0] ?? 'Builder';
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -33,17 +35,33 @@ export default function HomeScreen() {
       <LinearGradient colors={['#12121A', '#0A0A0F']} style={styles.header}>
         <View style={styles.headerContent}>
           <View>
-            <Text style={styles.greeting}>
-              Hola, {profile?.displayName?.split(' ')[0] ?? 'Builder'} 👋
-            </Text>
+            <Text style={styles.greeting}>Hola, {firstName} 👋</Text>
             <Text style={styles.subtitle}>¿Qué PC armaremos hoy?</Text>
           </View>
-          <TouchableOpacity
-            style={styles.adminBtn}
-            onPress={() => router.push('/admin/dashboard')}
-          >
-            <Ionicons name="settings-outline" size={24} color={Colors.textMuted} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {isVendor && (
+              <TouchableOpacity
+                style={styles.adminBtn}
+                onPress={() => router.push('/vendor/dashboard' as any)}
+              >
+                <Ionicons name="briefcase-outline" size={24} color={Colors.primary} />
+              </TouchableOpacity>
+            )}
+            {isAdmin && (
+              <TouchableOpacity
+                style={styles.adminBtn}
+                onPress={() => router.push('/admin/dashboard')}
+              >
+                <Ionicons name="settings-outline" size={24} color={Colors.warning} />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.adminBtn}
+              onPress={() => router.push('/profile' as any)}
+            >
+              <Ionicons name="person-circle-outline" size={26} color={Colors.textMuted} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Hero Card */}

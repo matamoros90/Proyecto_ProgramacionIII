@@ -22,6 +22,9 @@ build/
 .idea/
 Thumbs.db
 
+# Claude Code (configuración local del IDE, no compartir)
+.claude/
+
 # Expo
 *.orig.*
 web-build/

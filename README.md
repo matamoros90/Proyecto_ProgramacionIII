@@ -228,6 +228,91 @@ ALLOWED_ORIGINS=http://localhost:8081,http://TU_NUEVA_IP:8081,http://TU_NUEVA_IP
 
 ---
 
+## Actualización — 21 de Mayo 2026
+
+### Flujo completo de cotización y pago
+
+Se implementó el ciclo de vida completo de una cotización, desde que el cliente la crea hasta que el pago es verificado y se genera una orden de ensamblaje automáticamente.
+
+**Estados de una cotización:**
+
+```
+draft → confirmed → in_review → ready → accepted → payment_submitted → payment_verified
+```
+
+| Estado | Actor | Acción |
+|--------|-------|--------|
+| `draft` | Cliente | Crea la cotización con su build |
+| `confirmed` | Cliente | Confirma que desea proceder |
+| `in_review` | Admin | Asigna un vendedor; se notifica al cliente |
+| `ready` | Vendedor | Marca la cotización como revisada y lista |
+| `accepted` | Cliente | Acepta e ingresa dirección de entrega |
+| `payment_submitted` | Cliente | Envía comprobante de pago (tarjeta o transferencia) |
+| `payment_verified` | Vendedor | Verifica el pago → se crea la orden en ensamblaje automáticamente |
+
+### Nuevas rutas del backend
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| `PATCH` | `/api/quotes/:id/accept` | Cliente | Acepta cotización + dirección de entrega |
+| `POST` | `/api/quotes/:id/payment` | Cliente | Envía comprobante de pago |
+| `POST` | `/api/quotes/:id/followup` | Vendedor | Envía notificación de seguimiento al cliente |
+| `PATCH` | `/api/quotes/:id/ready` | Vendedor | Marca cotización como lista |
+| `PATCH` | `/api/quotes/:id/verify-payment` | Vendedor | Verifica pago y crea orden |
+| `GET` | `/api/quotes/vendor/assigned` | Vendedor | Lista cotizaciones asignadas al vendedor |
+| `GET` | `/api/admin/vendors` | Admin | Lista todos los vendedores registrados |
+
+### Nuevas pantallas móviles
+
+| Pantalla | Ruta en la app | Rol |
+|----------|---------------|-----|
+| Flujo de aceptar cotización | `mobile/app/quote/[id].tsx` | Cliente |
+| Flujo de pago | `mobile/app/quote/payment.tsx` | Cliente |
+| Dashboard del vendedor | `mobile/app/vendor/dashboard.tsx` | Vendedor |
+| Perfil de usuario | `mobile/app/profile.tsx` | Todos |
+| Admin — Órdenes | `mobile/app/admin/orders.tsx` | Admin |
+| Admin — Cotizaciones | `mobile/app/admin/quotes.tsx` | Admin |
+| Admin — Inventario | `mobile/app/admin/inventory.tsx` | Admin |
+| Admin — Entregas | `mobile/app/admin/deliveries.tsx` | Admin |
+| Admin — Ingresos | `mobile/app/admin/revenue.tsx` | Admin |
+
+### Mejoras al sistema de órdenes
+
+- Las órdenes ahora se crean automáticamente desde una cotización cuando el vendedor verifica el pago (`createFromQuote`).
+- Se agregó historial de estados (`stateHistory`) con timestamp y nota en cada transición.
+- El estado inicial puede ser `assembling` cuando viene de pago verificado, o `pending` en otros casos.
+- El administrador puede asignar técnico a una orden con `PATCH /api/admin/orders/:id/technician`.
+
+### Script de seed para vendedor
+
+Se agregó `backend/seed-vendor.js` para crear el usuario vendedor demo en Firebase Auth. Ejecutar **solo una vez** al configurar el proyecto:
+
+```bash
+cd backend
+node seed-vendor.js
+```
+
+> **Nota de seguridad:** Las credenciales de este script son únicamente para el entorno de desarrollo. En producción, crear usuarios vendedor desde el panel de administración de la app.
+
+| Campo | Valor (desarrollo) |
+|-------|-------------------|
+| Email | `vendedor@zonapc.gt` |
+| Contraseña | `Vendedor2026` |
+| Rol | `vendor` |
+
+### Corrección de seguridad incluida en esta actualización
+
+- **`verifyPayment`**: Se agregó la validación de que el vendedor que verifica el pago sea el asignado a esa cotización (`quote.vendorId !== vendorId`), igual que ya lo hacían `markReady` y `sendFollowup`.
+- **`.npmrc` eliminado**: Se eliminó el archivo `.npmrc` de la raíz ya que `package-lock.json` está presente y activo en cada sub-proyecto (`backend/` y `mobile/`).
+
+### Nuevas dependencias del sistema de tipos (mobile)
+
+Se amplió `mobile/types/index.ts` con:
+- Tipos `Quote`, `Order`, `Build`, `PcCategory` actualizados con todos los estados del flujo.
+- Tipo `Vendor` para el panel de administración.
+
+---
+
 ## Documentación
 
 - [Arquitectura del Backend](backend/README.md)

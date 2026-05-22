@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
+import { signOut as firebaseSignOut } from 'firebase/auth';
+import { auth } from '../services/firebase.config';
 import { useAuthStore } from '../stores/authStore';
 import api from '../services/api';
 
 export function useAuth() {
-  const { firebaseUser, profile, isLoading, isInitialized, setProfile } =
+  const { firebaseUser, profile, isLoading, isInitialized, setProfile, clear } =
     useAuthStore();
 
   // Cargar perfil del backend cuando hay usuario autenticado
@@ -23,6 +25,11 @@ export function useAuth() {
     return () => { cancelled = true; };
   }, [firebaseUser]);
 
+  async function signOut() {
+    clear();
+    await firebaseSignOut(auth);
+  }
+
   return {
     user: firebaseUser,
     profile,
@@ -30,5 +37,8 @@ export function useAuth() {
     isInitialized,
     isAuthenticated: !!firebaseUser,
     isAdmin: profile?.role === 'admin',
+    isVendor: profile?.role === 'vendor',
+    isVendorOrAdmin: profile?.role === 'vendor' || profile?.role === 'admin',
+    signOut,
   };
 }

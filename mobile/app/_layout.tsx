@@ -39,9 +39,19 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="admin/dashboard" />
+        <Stack.Screen name="admin/revenue" />
+        <Stack.Screen name="admin/deliveries" />
+        <Stack.Screen name="admin/inventory" />
+        <Stack.Screen name="admin/quotes" />
+        <Stack.Screen name="admin/orders" />
         <Stack.Screen name="builder/budget" />
         <Stack.Screen name="builder/custom" />
+        <Stack.Screen name="builder/[type]" />
         <Stack.Screen name="order/[id]" />
+        <Stack.Screen name="quote/[id]" />
+        <Stack.Screen name="quote/payment" />
+        <Stack.Screen name="vendor/dashboard" />
+        <Stack.Screen name="profile" />
       </Stack>
     </>
   );

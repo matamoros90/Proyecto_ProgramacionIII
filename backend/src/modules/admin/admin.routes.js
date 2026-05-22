@@ -12,5 +12,6 @@ router.patch('/orders/:id/state', ctrl.updateOrderState);
 router.patch('/orders/:id/assign', ctrl.assignTechnician);
 router.get('/quotes', ctrl.listQuotes);
 router.get('/inventory', ctrl.getInventory);
+router.get('/vendors', ctrl.listVendors);
 
 module.exports = router;

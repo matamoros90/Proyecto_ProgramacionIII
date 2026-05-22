@@ -12,7 +12,7 @@ import { useAuth } from '../../hooks/useAuth';
 interface DashboardData {
   orders: { total: number; byState: Record<string, number> };
   quotes: { total: number };
-  revenue: { total: number };
+  revenue: { total: number; totalAll: number };
 }
 
 const STATE_COLORS: Record<string, string> = {
@@ -85,11 +85,15 @@ export default function AdminDashboard() {
               <Text style={styles.metricValue}>{data.orders.total}</Text>
               <Text style={styles.metricLabel}>Órdenes Totales</Text>
             </View>
-            <View style={[styles.metricCard, { borderColor: Colors.accent }]}>
+            <TouchableOpacity
+              style={[styles.metricCard, { borderColor: Colors.accent }]}
+              onPress={() => router.push('/admin/revenue' as any)}
+            >
               <Ionicons name="cash" size={24} color={Colors.accent} />
               <Text style={styles.metricValue}>{formatPrice(data.revenue.total)}</Text>
               <Text style={styles.metricLabel}>Ingresos</Text>
-            </View>
+              <Ionicons name="chevron-forward" size={12} color={Colors.textMuted} style={{ alignSelf: 'flex-end' }} />
+            </TouchableOpacity>
             <View style={[styles.metricCard, { borderColor: Colors.secondary }]}>
               <Ionicons name="document-text" size={24} color={Colors.secondary} />
               <Text style={styles.metricValue}>{data.quotes.total}</Text>
@@ -147,9 +151,10 @@ export default function AdminDashboard() {
         {/* Navegación admin */}
         <Text style={styles.sectionTitle}>Gestión</Text>
         {[
-          { label: 'Gestionar Inventario', icon: 'cube', route: '/admin/inventory' },
-          { label: 'Ver Cotizaciones', icon: 'document-text', route: '/admin/quotes' },
-          { label: 'Gestionar Órdenes', icon: 'list', route: '/admin/orders' },
+          { label: 'Gestionar Inventario', icon: 'cube-outline', route: '/admin/inventory' },
+          { label: 'Ver Cotizaciones', icon: 'document-text-outline', route: '/admin/quotes' },
+          { label: 'Gestionar Órdenes', icon: 'list-outline', route: '/admin/orders' },
+          { label: 'Entregas', icon: 'car-outline', route: '/admin/deliveries' },
         ].map((item) => (
           <TouchableOpacity
             key={item.label}

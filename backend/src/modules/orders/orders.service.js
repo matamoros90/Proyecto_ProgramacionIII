@@ -4,7 +4,8 @@ const { ORDER_STATES, ORDER_STATE_FLOW, FCM_MESSAGES } = require('../../shared/c
 
 const COLLECTION = 'orders';
 
-async function createFromQuote(userId, quoteId, quoteData) {
+async function createFromQuote(userId, quoteId, quoteData, initialState) {
+  const startState = initialState || ORDER_STATES.PENDING;
   const ref = getDb().collection(COLLECTION).doc();
   const order = {
     id: ref.id,
@@ -13,9 +14,9 @@ async function createFromQuote(userId, quoteId, quoteData) {
     build: quoteData.build,
     totalPrice: quoteData.totalPrice,
     category: quoteData.category,
-    state: ORDER_STATES.PENDING,
+    state: startState,
     stateHistory: [
-      { state: ORDER_STATES.PENDING, timestamp: new Date().toISOString(), note: 'Orden creada' },
+      { state: startState, timestamp: new Date().toISOString(), note: initialState ? 'Orden creada — pago verificado' : 'Orden creada' },
     ],
     notes: '',
     technicianId: null,
@@ -36,16 +37,19 @@ async function getByUser(userId) {
   const snapshot = await getDb()
     .collection(COLLECTION)
     .where('userId', '==', userId)
-    .orderBy('createdAt', 'desc')
     .get();
-  return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  return snapshot.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 async function getAll(filters = {}) {
   let query = getDb().collection(COLLECTION);
   if (filters.state) query = query.where('state', '==', filters.state);
-  const snapshot = await query.orderBy('createdAt', 'desc').get();
-  return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  const snapshot = await query.get();
+  return snapshot.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 async function updateState(id, newState, note = '') {

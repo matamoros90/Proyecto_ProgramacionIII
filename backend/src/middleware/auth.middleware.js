@@ -23,4 +23,10 @@ async function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { authenticate, requireAdmin };
+async function requireVendorOrAdmin(req, res, next) {
+  if (!req.user) return sendError(res, 401, 'No autenticado');
+  if (!req.user.admin && !req.user.vendor) return sendError(res, 403, 'Acceso solo para vendedores o administradores');
+  next();
+}
+
+module.exports = { authenticate, requireAdmin, requireVendorOrAdmin };
