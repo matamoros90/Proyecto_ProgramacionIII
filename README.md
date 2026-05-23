@@ -462,6 +462,92 @@ El componente `mobile/app/(tabs)/index.tsx` muestra un spinner mientras `isAuthe
 
 ---
 
+## Actualización — 22 de Mayo 2026 (tarde)
+
+### Rediseño visual completo — tema claro profesional
+
+Se reemplazó la paleta "gamer/neón" por un tema claro profesional apto para presentaciones.
+
+#### Paleta de colores (`mobile/constants/colors.ts`)
+
+| Elemento | Antes | Ahora |
+|----------|-------|-------|
+| Fondo | Negro `#0A0A0F` | Crema cálida `#F2F0EA` |
+| Superficies | Oscuro `#12121A` | Blanco `#FFFFFF` |
+| Color primario | Cyan neón `#00D4FF` | Azul intenso `#2563EB` |
+| Color secundario | Magenta neón `#7B2FBE` | Violeta `#6D28D9` |
+| Acento | Verde neón `#00FF88` | Ámbar `#D97706` |
+| Texto principal | Blanco `#FFFFFF` | Casi negro `#111827` |
+
+#### Pantallas actualizadas
+
+Se actualizaron **20 pantallas** en total:
+- Todos los headers: gradiente oscuro `['#12121A', '#0A0A0F']` → azul pálido `['#DBEAFE', '#EFF6FF']`
+- Pantallas de auth (login/register): mismo gradiente claro
+- `StatusBar`: `style="light"` → `style="dark"` con fondo `#EFF6FF`
+- `userInterfaceStyle` en `app.json`: `dark` → `light`
+- Tarjetas métricas de dashboards: fondo azul pálido `#EEF4FF` con texto oscuro
+
+---
+
+### Nuevo ícono y splash screen (`mobile/assets/images/`)
+
+Se generaron todos los assets visuales del app desde cero (el placeholder de Expo fue reemplazado):
+
+| Asset | Dimensión | Descripción |
+|-------|-----------|-------------|
+| `icon.png` | 1024×1024 | "Z" azul `#2563EB` sobre fondo navy `#0A1223`, nodos de circuito en esquinas, efecto glow |
+| `adaptive-icon.png` | 1024×1024 | Misma Z sin fondo — Android adaptive icon |
+| `splash.png` | 1284×2778 | Ícono centrado sobre fondo crema `#F2F0EA` |
+| `notification-icon.png` | 96×96 | Z blanca sobre transparente para notificaciones |
+| `favicon.png` | 48×48 | Versión mínima para web |
+
+El splash screen fue **eliminado de la secuencia de inicio** — la app arranca directo a la pantalla de login sin ninguna pantalla intermedia. Cambios:
+- `app.json`: `splash.image` eliminado, solo queda `backgroundColor: "#F2F0EA"`
+- `_layout.tsx`: `SplashScreen.hideAsync()` llamado inmediatamente al montar el root layout
+
+---
+
+### Preparación para deploy en Railway (`backend/railway.toml`)
+
+Se preparó el backend para despliegue en la nube. Esto elimina la necesidad de que cada compañero configure credenciales de Firebase y corra el backend localmente.
+
+**Archivo creado:** `backend/railway.toml`
+```toml
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "node src/server.js"
+healthcheckPath = "/health"
+```
+
+**`mobile/services/api.ts` mejorado:**
+- Cuando Expo corre en modo `--tunnel` (sin IP local) → usa automáticamente la URL de Railway
+- Cuando corre en red local (LAN) → detecta la IP y usa el backend local
+- La URL de Railway se configura en la línea 13 del archivo
+
+#### Pasos para hacer el deploy (solo el responsable del backend)
+
+1. Ir a [railway.app](https://railway.app) → New Project → Deploy from GitHub
+2. Seleccionar el repo → **Root Directory:** `backend`
+3. En **Variables** agregar todas las variables del `.env` real
+4. Copiar la URL pública generada (ej: `https://zonapc-backend.up.railway.app`)
+5. En `mobile/services/api.ts` línea 13, reemplazar `RAILWAY_URL` con esa URL + `/api`
+
+#### Resultado para los compañeros tras el deploy
+
+```bash
+git pull origin main
+cd mobile
+npm ci
+npx expo start --tunnel   # ← único comando necesario
+```
+
+No necesitan correr el backend, no necesitan credenciales de Firebase, no necesitan estar en la misma WiFi.
+
+---
+
 ## Documentación
 
 - [Arquitectura del Backend](backend/README.md)
