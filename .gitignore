@@ -6,7 +6,9 @@ node_modules/
 # Entorno (nunca subir credenciales)
 .env
 *.local
-google-services.json
+# google-services.json en la raíz se ignora (duplicado innecesario)
+/google-services.json
+# El de mobile/ SÍ se versiona para que EAS Build compile el APK
 GoogleService-Info.plist
 *-firebase-adminsdk-*.json
 

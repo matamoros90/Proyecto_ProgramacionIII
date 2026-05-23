@@ -29,7 +29,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0A1223"
       },
-      "package": "com.zonapc.builder"
+      "package": "com.zonapc.builder",
+      "googleServicesFile": "./google-services.json"
     },
     "ios": {
       "supportsTablet": false,
