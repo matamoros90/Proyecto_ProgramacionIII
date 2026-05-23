@@ -27,9 +27,10 @@ const globalLimiter = rateLimit({
   message: { success: false, message: 'Demasiadas solicitudes, intenta de nuevo en 15 minutos' },
 });
 
+// Límite estricto solo para registro — evita creación masiva de cuentas
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 20,
   message: { success: false, message: 'Demasiados intentos de autenticación' },
 });
 

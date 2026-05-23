@@ -6,8 +6,10 @@ async function getAll({ category, level } = {}) {
   let query = getDb().collection(COLLECTION).where('published', '==', true);
   if (category) query = query.where('category', '==', category);
   if (level) query = query.where('level', '==', level);
-  const snapshot = await query.orderBy('order', 'asc').get();
-  return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  const snapshot = await query.get();
+  return snapshot.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 }
 
 async function getById(id) {

@@ -3,9 +3,10 @@ const authService = require('./auth.service');
 
 async function updateProfile(req, res, next) {
   try {
-    const { displayName, address } = req.body;
-    if (!displayName && address === undefined) return sendError(res, 400, 'Nada que actualizar');
-    await authService.updateUserProfile(req.user.uid, { displayName, address });
+    const { displayName, address, savedCard } = req.body;
+    const hasChanges = displayName || address !== undefined || savedCard !== undefined;
+    if (!hasChanges) return sendError(res, 400, 'Nada que actualizar');
+    await authService.updateUserProfile(req.user.uid, { displayName, address, savedCard });
     const updated = await authService.getUserProfile(req.user.uid);
     sendSuccess(res, updated, 'Perfil actualizado');
   } catch (err) {
@@ -15,8 +16,16 @@ async function updateProfile(req, res, next) {
 
 async function getProfile(req, res, next) {
   try {
-    const profile = await authService.getUserProfile(req.user.uid);
-    if (!profile) return sendError(res, 404, 'Perfil no encontrado');
+    let profile = await authService.getUserProfile(req.user.uid);
+    if (!profile) {
+      // Detecta el rol desde los custom claims del token Firebase
+      const role = req.user.admin ? 'admin' : req.user.vendor ? 'vendor' : 'client';
+      profile = await authService.createUserProfile(req.user.uid, {
+        displayName: req.user.name || req.user.email?.split('@')[0] || 'Usuario',
+        email: req.user.email || '',
+        role,
+      });
+    }
     sendSuccess(res, profile);
   } catch (err) {
     next(err);

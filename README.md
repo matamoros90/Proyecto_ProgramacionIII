@@ -313,6 +313,155 @@ Se amplió `mobile/types/index.ts` con:
 
 ---
 
+## Actualización — 22 de Mayo 2026
+
+### Correcciones de autenticación, roles y estabilidad
+
+Esta sesión corrigió una serie de bugs críticos relacionados con la gestión de roles (admin/vendedor/cliente), almacenamiento de datos de perfil, y errores en cascada que ocurrían al iniciar y cerrar sesión.
+
+---
+
+### Bugs corregidos
+
+#### 1. Admin y vendedor llegaban a la vista de cliente al iniciar sesión
+
+**Causa:** El hook `useAuth.ts` tenía un `useEffect` que llamaba a `GET /api/auth/profile` desde cada componente que lo usara. Con varias pantallas montadas simultáneamente, se disparaban múltiples llamadas al API en paralelo, agotando el rate limit (`429 Too Many Requests`) y creando condiciones de carrera.
+
+**Corrección:**
+- Se eliminó el `useEffect` de `mobile/hooks/useAuth.ts`. Ahora es un lector puro del store de Zustand.
+- La carga del perfil se centralizó en `mobile/app/_layout.tsx` (una sola llamada por cambio de sesión).
+
+| Archivo | Cambio |
+|---------|--------|
+| `mobile/hooks/useAuth.ts` | Eliminado `useEffect` con llamada a `/auth/profile` |
+| `mobile/app/_layout.tsx` | Añadido `useEffect` que carga el perfil una sola vez al cambiar `firebaseUser.uid` |
+
+---
+
+#### 2. Perfil del admin se creaba con rol `client`
+
+**Causa:** Al no existir documento en Firestore para el usuario admin, `GET /api/auth/profile` retornaba 404. El frontend no podía leer el rol, por lo que `isAdmin` era `false`.
+
+**Corrección:** El controlador `getProfile` ahora auto-crea el documento de perfil cuando no existe, leyendo los custom claims de Firebase Auth (`req.user.admin`, `req.user.vendor`) para asignar el rol correcto.
+
+| Archivo | Cambio |
+|---------|--------|
+| `backend/src/modules/auth/auth.controller.js` | Auto-creación del perfil con rol derivado de custom claims |
+
+---
+
+#### 3. Guardar datos personales y tarjeta fallaba con "Error interno del servidor"
+
+**Causa A — Firestore `update` falla si el documento no existe:** El servicio usaba `.update()` sobre documentos que podían no existir aún.
+
+**Corrección:** Cambiado a `.set(data, { merge: true })` en `backend/src/modules/auth/auth.service.js`, que funciona tanto si el documento existe como si no.
+
+**Causa B — Campo `savedCard` ignorado en el controlador:** `updateProfile` solo leía `{ displayName, address }` del body; `savedCard` llegaba pero nunca se pasaba al servicio.
+
+**Corrección:** Se añadió `savedCard` al destructuring y al `hasChanges` guard en `auth.controller.js`.
+
+| Archivo | Cambio |
+|---------|--------|
+| `backend/src/modules/auth/auth.service.js` | `.update()` → `.set({}, { merge: true })` |
+| `backend/src/modules/auth/auth.controller.js` | Añadido `savedCard` al `updateProfile` |
+
+---
+
+#### 4. Datos de tarjeta de crédito — implementación segura (PCI-DSS básico)
+
+Se implementó un flujo de tarjeta de crédito en `mobile/app/profile.tsx` siguiendo las buenas prácticas de la industria:
+
+- Validación con **algoritmo de Luhn** en el cliente antes de enviar.
+- Detección automática de **Visa / Mastercard** por el primer dígito.
+- El CVV **nunca se almacena** — solo se usa para validación visual en el cliente.
+- El backend **solo recibe y guarda** `{ brand, last4, cardHolder, expiryMonth, expiryYear }`.
+- Se valida que la fecha de expiración sea futura.
+
+| Archivo | Cambio |
+|---------|--------|
+| `mobile/app/profile.tsx` | Sección completa de tarjeta con Luhn, detección de marca y validación de fecha |
+| `mobile/types/index.ts` | Nuevo tipo `SavedCard`; campo `savedCard?: SavedCard` en `User` |
+
+---
+
+#### 5. Botón de atrás del admin crasheaba al cerrar sesión
+
+**Causa:** El `useEffect` del dashboard admin se disparaba cuando `isAdmin` cambiaba a `false` durante el logout (el perfil se limpiaba), mostraba la alerta "Sin acceso" y llamaba `router.back()` con la pila de navegación vacía.
+
+**Corrección:**
+- Se reemplazó el botón de atrás con un botón de **cerrar sesión** con diálogo de confirmación.
+- El `useEffect` ahora tiene el guard `if (!profileReady || !isAuthenticated) return;` para no ejecutarse durante transiciones de logout.
+- La redirección usa `router.replace('/(auth)/login')` en lugar de `router.back()`.
+
+| Archivo | Cambio |
+|---------|--------|
+| `mobile/app/admin/dashboard.tsx` | Guard en `useEffect`, logout con confirmación, `router.replace` |
+| `mobile/app/vendor/dashboard.tsx` | Mismas correcciones que el dashboard admin |
+
+---
+
+#### 6. Segundo inicio de sesión como admin llegaba a vista cliente
+
+**Causa:** Al cerrar sesión, `clearProfile()` llamaba `setProfile(null)` que dejaba `profileReady: true`. En la siguiente apertura de sesión, había una ventana breve donde `profileReady: true` + `isAdmin: false` hacía que la app mostrara el flujo de cliente antes de cargar el perfil real.
+
+**Corrección:** Se añadió la acción `clearProfile()` en `mobile/stores/authStore.ts` que establece `{ profile: null, profileReady: false }`, indicando que el perfil aún no ha sido cargado (a diferencia de `setProfile(null)` que indica "cargado pero nulo").
+
+El componente `mobile/app/(tabs)/index.tsx` muestra un spinner mientras `isAuthenticated && !profileReady` y solo redirige cuando `profileReady === true`.
+
+| Archivo | Cambio |
+|---------|--------|
+| `mobile/stores/authStore.ts` | Nueva acción `clearProfile()` con `profileReady: false` |
+| `mobile/app/(tabs)/index.tsx` | Spinner durante carga; `useEffect` guarded por `profileReady` |
+
+---
+
+#### 7. Error 500 en `GET /api/tutorials`
+
+**Causa:** La consulta Firestore usaba `.where('published', '==', true).orderBy('order', 'asc')`, lo que requiere un índice compuesto que no estaba creado en la consola de Firebase.
+
+**Corrección:** Se eliminó `.orderBy()` de la consulta Firestore. Los resultados ahora se ordenan en memoria con `.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))`.
+
+| Archivo | Cambio |
+|---------|--------|
+| `backend/src/modules/tutorials/tutorials.service.js` | Ordenamiento en memoria en lugar de `orderBy` de Firestore |
+
+---
+
+#### 8. Rate limit demasiado estricto en `/api/auth`
+
+**Causa:** El `authLimiter` estaba en `max: 10` peticiones por 15 minutos, insuficiente para la carga normal de la app (login + carga de perfil + múltiples pantallas).
+
+**Corrección:** Aumentado a `max: 20` peticiones por 15 minutos.
+
+| Archivo | Cambio |
+|---------|--------|
+| `backend/src/config/app.js` | `authLimiter.max` de 10 → 20 |
+
+---
+
+### Resumen de archivos modificados
+
+| Archivo | Tipo de cambio |
+|---------|---------------|
+| `mobile/stores/authStore.ts` | Nueva acción `clearProfile()` con `profileReady: false` |
+| `mobile/hooks/useAuth.ts` | Eliminado `useEffect`; ahora es lector puro del store |
+| `mobile/app/_layout.tsx` | Carga centralizada del perfil |
+| `mobile/app/(tabs)/index.tsx` | Spinner mientras carga; redirección guardada por `profileReady` |
+| `mobile/app/(tabs)/_layout.tsx` | Limpieza menor de tabs |
+| `mobile/app/admin/dashboard.tsx` | Guard de `useEffect`, botón logout, `router.replace` |
+| `mobile/app/vendor/dashboard.tsx` | Guard de `useEffect`, botón logout, `router.replace` |
+| `mobile/app/profile.tsx` | Tarjeta de crédito segura, email desde Firebase fallback, logout |
+| `mobile/app/(auth)/login.tsx` | Ajuste menor de flujo |
+| `mobile/app/(auth)/register.tsx` | Ajuste menor de flujo |
+| `mobile/services/api.ts` | Ajuste de interceptores |
+| `mobile/types/index.ts` | Nuevo tipo `SavedCard` |
+| `backend/src/config/app.js` | `authLimiter` de 10 → 20 |
+| `backend/src/modules/auth/auth.controller.js` | Auto-creación de perfil; `savedCard` en `updateProfile` |
+| `backend/src/modules/auth/auth.service.js` | `.update()` → `.set({merge:true})`; sanitización de `savedCard` |
+| `backend/src/modules/tutorials/tutorials.service.js` | Ordenamiento en memoria; eliminado `orderBy` de Firestore |
+
+---
+
 ## Documentación
 
 - [Arquitectura del Backend](backend/README.md)

@@ -1,29 +1,12 @@
-import { useEffect } from 'react';
 import { signOut as firebaseSignOut } from 'firebase/auth';
 import { auth } from '../services/firebase.config';
 import { useAuthStore } from '../stores/authStore';
-import api from '../services/api';
 
+// La carga del perfil está centralizada en _layout.tsx.
+// Este hook solo lee el store — sin useEffect, sin llamadas API.
 export function useAuth() {
-  const { firebaseUser, profile, isLoading, isInitialized, setProfile, clear } =
+  const { firebaseUser, profile, profileReady, isLoading, isInitialized, clear } =
     useAuthStore();
-
-  // Cargar perfil del backend cuando hay usuario autenticado
-  useEffect(() => {
-    if (!firebaseUser) {
-      setProfile(null);
-      return;
-    }
-    let cancelled = false;
-    api.get('/auth/profile')
-      .then((res: any) => {
-        if (!cancelled) setProfile(res.data ?? res);
-      })
-      .catch(() => {
-        if (!cancelled) setProfile(null);
-      });
-    return () => { cancelled = true; };
-  }, [firebaseUser]);
 
   async function signOut() {
     clear();
@@ -33,6 +16,7 @@ export function useAuth() {
   return {
     user: firebaseUser,
     profile,
+    profileReady,
     isLoading,
     isInitialized,
     isAuthenticated: !!firebaseUser,

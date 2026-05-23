@@ -27,15 +27,24 @@ const STATE_COLORS: Record<string, string> = {
 };
 
 export default function AdminDashboard() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isAuthenticated, profileReady, signOut } = useAuth();
+
+  function handleSignOut() {
+    Alert.alert('Cerrar sesión', '¿Estás seguro que deseas salir?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Cerrar sesión', style: 'destructive', onPress: signOut },
+    ]);
+  }
   const [data, setData] = useState<DashboardData | null>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Esperar a que el perfil esté cargado y el usuario autenticado
+    if (!profileReady || !isAuthenticated) return;
     if (!isAdmin) {
       Alert.alert('Sin acceso', 'No tienes permisos de administrador');
-      router.back();
+      router.replace('/(auth)/login' as any);
       return;
     }
     Promise.all([
@@ -44,8 +53,10 @@ export default function AdminDashboard() {
     ]).then(([dash, ord]: any) => {
       setData(dash.data);
       setOrders(ord.data.slice(0, 10));
+    }).catch((err: any) => {
+      Alert.alert('Error', err?.message ?? 'No se pudo cargar el panel');
     }).finally(() => setLoading(false));
-  }, [isAdmin]);
+  }, [isAdmin, isAuthenticated, profileReady]);
 
   async function updateState(orderId: string, newState: string) {
     try {
@@ -69,9 +80,6 @@ export default function AdminDashboard() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <LinearGradient colors={['#12121A', '#0A0A0F']} style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
         <Text style={styles.title}>Panel Administrativo</Text>
         <Text style={styles.subtitle}>ZonaPc Builder — Control total</Text>
       </LinearGradient>
@@ -166,6 +174,11 @@ export default function AdminDashboard() {
             <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
           </TouchableOpacity>
         ))}
+
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleSignOut}>
+          <Ionicons name="log-out-outline" size={20} color={Colors.error} />
+          <Text style={styles.logoutText}>Cerrar sesión</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -176,7 +189,6 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, backgroundColor: Colors.background },
   loadingText: { color: Colors.textMuted, fontSize: FontSize.md },
   header: { paddingTop: 56, paddingBottom: Spacing.lg, paddingHorizontal: Spacing.lg, gap: Spacing.xs },
-  backBtn: { marginBottom: Spacing.sm },
   title: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.textPrimary },
   subtitle: { fontSize: FontSize.sm, color: Colors.primary },
   body: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xxl },
@@ -225,4 +237,11 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   navLabel: { flex: 1, fontSize: FontSize.md, fontWeight: '600', color: Colors.textPrimary },
+  logoutBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: Spacing.sm, backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md, padding: Spacing.md,
+    borderWidth: 1, borderColor: Colors.error, marginTop: Spacing.sm,
+  },
+  logoutText: { fontSize: FontSize.md, fontWeight: '700', color: Colors.error },
 });

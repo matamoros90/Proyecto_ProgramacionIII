@@ -8,10 +8,10 @@ function getDevHost(): string {
   const hostUri = Constants.expoConfig?.hostUri; // "ip:port" en LAN, "tunnel.exp.direct:443" en tunnel
   if (hostUri) {
     const host = hostUri.split(':')[0];
-    // Si es un dominio de tunnel, no sirve para el backend local
-    if (!host.includes('.')) return host; // es una IP
+    // Si es una IP local (ej: 192.168.1.13) usarla; si es un dominio de tunnel (ej: xxx.exp.direct) ignorarla
+    if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return host;
   }
-  return '192.168.1.17'; // IP local fallback
+  return '192.168.1.13'; // IP local fallback
 }
 
 const BASE_URL = __DEV__

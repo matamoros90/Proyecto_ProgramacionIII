@@ -53,8 +53,25 @@ async function updateUserProfile(uid, updates) {
   const allowed = {};
   if (updates.displayName) allowed.displayName = String(updates.displayName).trim().slice(0, 100);
   if (updates.address !== undefined) allowed.address = String(updates.address ?? '').trim().slice(0, 200);
+  if (updates.savedCard !== undefined) {
+    if (updates.savedCard === null) {
+      allowed.savedCard = null;
+    } else {
+      const { brand, last4, cardHolder, expiryMonth, expiryYear } = updates.savedCard;
+      if (last4 && cardHolder && expiryMonth && expiryYear) {
+        allowed.savedCard = {
+          brand: ['visa', 'mastercard'].includes(brand) ? brand : 'other',
+          last4: String(last4).slice(-4),
+          cardHolder: String(cardHolder).trim().slice(0, 60),
+          expiryMonth: String(expiryMonth).padStart(2, '0'),
+          expiryYear: String(expiryYear),
+        };
+      }
+    }
+  }
   if (Object.keys(allowed).length === 0) return;
-  await getDb().collection('users').doc(uid).update(allowed);
+  // set+merge funciona aunque el documento no exista aún (a diferencia de update)
+  await getDb().collection('users').doc(uid).set(allowed, { merge: true });
 }
 
 module.exports = { getUserProfile, createUserProfile, updateFcmToken, setAdminRole, setVendorRole, listVendors, updateUserProfile };

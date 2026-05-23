@@ -7,7 +7,7 @@ function TabIcon({ name, color, size }: { name: any; color: string; size: number
 }
 
 export default function TabsLayout() {
-
+  // La protección por rol la maneja _layout.tsx — no duplicar navegación aquí
   return (
     <Tabs
       screenOptions={{

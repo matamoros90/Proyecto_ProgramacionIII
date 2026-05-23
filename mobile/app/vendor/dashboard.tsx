@@ -35,7 +35,14 @@ const STATUS_LABEL: Record<QuoteStatus, string> = {
 };
 
 export default function VendorDashboard() {
-  const { isVendor } = useAuth();
+  const { isVendor, isAuthenticated, profileReady, signOut } = useAuth();
+
+  function handleSignOut() {
+    Alert.alert('Cerrar sesión', '¿Estás seguro que deseas salir?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Cerrar sesión', style: 'destructive', onPress: signOut },
+    ]);
+  }
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -54,13 +61,14 @@ export default function VendorDashboard() {
   }, []);
 
   useEffect(() => {
+    if (!profileReady || !isAuthenticated) return;
     if (!isVendor) {
       Alert.alert('Sin acceso', 'Esta sección es solo para vendedores');
-      router.back();
+      router.replace('/(auth)/login' as any);
       return;
     }
     load();
-  }, [isVendor]);
+  }, [isVendor, isAuthenticated, profileReady]);
 
   async function handleFollowup(quoteId: string) {
     setActionLoading(quoteId + '_followup');
@@ -143,9 +151,6 @@ export default function VendorDashboard() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={Colors.primary} />}
     >
       <LinearGradient colors={['#12121A', '#0A0A0F']} style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
         <Text style={styles.title}>Panel Vendedor</Text>
         <Text style={styles.subtitle}>Gestiona tus cotizaciones asignadas</Text>
       </LinearGradient>
@@ -256,6 +261,11 @@ export default function VendorDashboard() {
             );
           })
         )}
+
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleSignOut}>
+          <Ionicons name="log-out-outline" size={20} color={Colors.error} />
+          <Text style={styles.logoutText}>Cerrar sesión</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -266,7 +276,6 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, backgroundColor: Colors.background },
   loadingText: { color: Colors.textMuted, fontSize: FontSize.md },
   header: { paddingTop: 56, paddingBottom: Spacing.lg, paddingHorizontal: Spacing.lg, gap: Spacing.xs },
-  backBtn: { marginBottom: Spacing.sm },
   title: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.textPrimary },
   subtitle: { fontSize: FontSize.sm, color: Colors.primary },
   metrics: { flexDirection: 'row', padding: Spacing.md, gap: Spacing.sm },
@@ -294,4 +303,11 @@ const styles = StyleSheet.create({
   verifiedText: { fontSize: FontSize.sm, color: Colors.success, fontWeight: '600' },
   waitingBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   waitingText: { fontSize: FontSize.sm, color: Colors.info },
+  logoutBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: Spacing.sm, backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md, padding: Spacing.md,
+    borderWidth: 1, borderColor: Colors.error, marginTop: Spacing.sm,
+  },
+  logoutText: { fontSize: FontSize.md, fontWeight: '700', color: Colors.error },
 });

@@ -169,6 +169,14 @@ export interface Order {
 
 // ─── Usuario ──────────────────────────────────────────────────────────────────
 
+export interface SavedCard {
+  brand: 'visa' | 'mastercard' | 'other';
+  last4: string;
+  cardHolder: string;
+  expiryMonth: string;
+  expiryYear: string;
+}
+
 export interface User {
   uid: string;
   email: string;
@@ -176,6 +184,7 @@ export interface User {
   role: 'client' | 'admin' | 'vendor' | 'technician';
   fcmTokens: string[];
   address?: string;
+  savedCard?: SavedCard;
   createdAt: string;
 }
 

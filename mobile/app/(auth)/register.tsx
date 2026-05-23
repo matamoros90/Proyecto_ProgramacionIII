@@ -104,8 +104,7 @@ export default function RegisterScreen() {
             >
               <LinearGradient
                 colors={[Colors.primary, Colors.secondary]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 style={styles.registerBtnGradient}
               >
                 <Text style={styles.registerBtnText}>
@@ -136,14 +135,10 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: FontSize.md, color: Colors.primary, marginTop: Spacing.xs },
   form: { gap: Spacing.md },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: Spacing.md,
-    height: 52,
+    borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.border,
+    paddingHorizontal: Spacing.md, height: 52,
   },
   inputIcon: { marginRight: Spacing.sm },
   input: { flex: 1, color: Colors.textPrimary, fontSize: FontSize.md },

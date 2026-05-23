@@ -4,13 +4,18 @@ import { StatusBar } from 'expo-status-bar';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../services/firebase.config';
 import { useAuthStore } from '../stores/authStore';
+import api from '../services/api';
 
 export default function RootLayout() {
-  const { isInitialized, firebaseUser, setFirebaseUser, setInitialized } = useAuthStore();
+  const {
+    isInitialized, firebaseUser,
+    setFirebaseUser, setInitialized,
+    setProfile, clearProfile,
+  } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
-  // Listener de auth a nivel root
+  // Firebase auth state — callback síncrono para evitar problemas con NavigationContainer
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user);
@@ -19,12 +24,24 @@ export default function RootLayout() {
     return unsubscribe;
   }, []);
 
-  // Redirigir según estado de auth
+  // Carga del perfil centralizada aquí (UNA sola llamada por sesión)
+  // Así el hook useAuth no dispara llamadas duplicadas desde cada componente
+  useEffect(() => {
+    if (!firebaseUser) {
+      clearProfile();
+      return;
+    }
+    let cancelled = false;
+    api.get('/auth/profile')
+      .then((res: any) => { if (!cancelled) setProfile(res.data ?? res); })
+      .catch(() => { if (!cancelled) setProfile(null); });
+    return () => { cancelled = true; };
+  }, [firebaseUser?.uid]);
+
+  // Redirección según estado de autenticación
   useEffect(() => {
     if (!isInitialized) return;
-
     const inAuthGroup = segments[0] === '(auth)';
-
     if (!firebaseUser && !inAuthGroup) {
       router.replace('/(auth)/login');
     } else if (firebaseUser && inAuthGroup) {

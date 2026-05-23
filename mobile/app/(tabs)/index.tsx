@@ -1,4 +1,5 @@
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,7 +26,23 @@ const QUICK_ACTIONS = [
 ];
 
 export default function HomeScreen() {
-  const { profile, isAdmin, isVendor } = useAuth();
+  const { profile, profileReady, isAdmin, isVendor, isAuthenticated } = useAuth();
+
+  // Redirige al panel correcto cuando el perfil termina de cargar
+  useEffect(() => {
+    if (!profileReady) return;
+    if (isAdmin) router.replace('/admin/dashboard');
+    else if (isVendor) router.replace('/vendor/dashboard');
+  }, [profileReady, isAdmin, isVendor]);
+
+  // Mientras el perfil no ha cargado (y el usuario está autenticado), evita el flash
+  if (isAuthenticated && !profileReady) {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   const firstName = profile?.displayName?.split(' ')[0] ?? 'Builder';
 
