@@ -49,7 +49,7 @@ export default function HomeScreen() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
-      <LinearGradient colors={['#12121A', '#0A0A0F']} style={styles.header}>
+      <LinearGradient colors={['#DBEAFE', '#EFF6FF']} style={styles.header}>
         <View style={styles.headerContent}>
           <View>
             <Text style={styles.greeting}>Hola, {firstName} 👋</Text>

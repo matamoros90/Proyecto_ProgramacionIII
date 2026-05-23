@@ -79,7 +79,7 @@ export default function AdminDashboard() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <LinearGradient colors={['#12121A', '#0A0A0F']} style={styles.header}>
+      <LinearGradient colors={['#DBEAFE', '#EFF6FF']} style={styles.header}>
         <Text style={styles.title}>Panel Administrativo</Text>
         <Text style={styles.subtitle}>ZonaPc Builder — Control total</Text>
       </LinearGradient>

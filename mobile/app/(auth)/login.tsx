@@ -33,7 +33,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <LinearGradient colors={['#0A0A0F', '#12121A', '#0A0A0F']} style={styles.container}>
+    <LinearGradient colors={['#EFF6FF', '#DBEAFE', '#EFF6FF']} style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.inner}

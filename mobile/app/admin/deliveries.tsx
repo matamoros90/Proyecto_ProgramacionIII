@@ -45,7 +45,7 @@ export default function AdminDeliveries() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <LinearGradient colors={['#12121A', '#0A0A0F']} style={styles.header}>
+      <LinearGradient colors={['#DBEAFE', '#EFF6FF']} style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>

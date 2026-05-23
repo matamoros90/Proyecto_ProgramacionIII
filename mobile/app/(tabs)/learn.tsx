@@ -74,7 +74,7 @@ export default function LearnScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#12121A', '#0A0A0F']} style={styles.header}>
+      <LinearGradient colors={['#DBEAFE', '#EFF6FF']} style={styles.header}>
         <Text style={styles.title}>Centro de Aprendizaje</Text>
         <Text style={styles.subtitle}>Aprende sobre hardware y ensamblaje</Text>
         <View style={styles.searchWrapper}>

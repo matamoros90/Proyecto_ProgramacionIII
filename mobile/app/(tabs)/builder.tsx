@@ -37,7 +37,7 @@ const PC_TYPES = [
 export default function BuilderMenuScreen() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <LinearGradient colors={['#12121A', '#0A0A0F']} style={styles.header}>
+      <LinearGradient colors={['#DBEAFE', '#EFF6FF']} style={styles.header}>
         <Text style={styles.title}>Armar PC</Text>
         <Text style={styles.subtitle}>Elige cómo quieres construir tu computadora</Text>
       </LinearGradient>
