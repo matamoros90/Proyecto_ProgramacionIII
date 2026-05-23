@@ -1,10 +1,14 @@
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../services/firebase.config';
 import { useAuthStore } from '../stores/authStore';
 import api from '../services/api';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
+SplashScreen.hideAsync().catch(() => {});
 
 export default function RootLayout() {
   const {
