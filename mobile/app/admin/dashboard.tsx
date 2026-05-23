@@ -195,14 +195,14 @@ const styles = StyleSheet.create({
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   metricCard: {
     width: '47%',
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.cardLight,
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     borderWidth: 1,
     gap: Spacing.xs,
   },
-  metricValue: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.textPrimary },
-  metricLabel: { fontSize: FontSize.xs, color: Colors.textMuted },
+  metricValue: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.textOnLight },
+  metricLabel: { fontSize: FontSize.xs, color: Colors.textOnLightMuted },
   sectionTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.textPrimary },
   orderCard: {
     backgroundColor: Colors.surface,

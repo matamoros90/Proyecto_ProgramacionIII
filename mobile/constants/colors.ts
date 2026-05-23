@@ -1,59 +1,67 @@
-// Paleta gamer/futurista — dark mode
+// Paleta profesional — dark mode con acentos sobrios
 export const Colors = {
-  // Fondos
+  // Fondos oscuros
   background: '#0A0A0F',
-  surface: '#12121A',
-  surfaceElevated: '#1A1A26',
-  card: '#16161F',
+  surface: '#14141E',
+  surfaceElevated: '#1C1C28',
+  card: '#111119',
 
-  // Acentos primarios (cyan futurista)
-  primary: '#00D4FF',
-  primaryDark: '#0099BB',
-  primaryGlow: 'rgba(0, 212, 255, 0.15)',
+  // Tarjetas/botones claros — crema cálida (para métricas y CTAs destacados)
+  cardLight: '#E6E2DC',
+  cardLightBorder: '#CAC6BF',
 
-  // Acentos secundarios (magenta/morado)
-  secondary: '#7B2FBE',
-  secondaryLight: '#9B59D0',
-  secondaryGlow: 'rgba(123, 47, 190, 0.20)',
+  // Acento primario — azul acero profesional (reemplaza cyan neón)
+  primary: '#4A8ED6',
+  primaryDark: '#3572B8',
+  primaryGlow: 'rgba(74, 142, 214, 0.12)',
 
-  // Acentos de acción (verde neón)
-  accent: '#00FF88',
-  accentDark: '#00CC6A',
-  accentGlow: 'rgba(0, 255, 136, 0.15)',
+  // Secundario — índigo suave (reemplaza magenta neón)
+  secondary: '#7264B8',
+  secondaryLight: '#8A7CCC',
+  secondaryGlow: 'rgba(114, 100, 184, 0.12)',
+
+  // Acento cálido — bronce/ámbar (reemplaza verde neón)
+  accent: '#C8924E',
+  accentDark: '#A87840',
+  accentGlow: 'rgba(200, 146, 78, 0.12)',
 
   // Estados
-  success: '#00FF88',
-  warning: '#FFB800',
-  error: '#FF4757',
-  info: '#00D4FF',
+  success: '#4E9E7A',
+  warning: '#C8924E',
+  error: '#C85858',
+  info: '#4A8ED6',
 
-  // Texto
-  textPrimary: '#FFFFFF',
-  textSecondary: '#A0A0B8',
-  textMuted: '#606080',
-  textDisabled: '#404060',
+  // Texto sobre fondos oscuros
+  textPrimary: '#EDEAE5',
+  textSecondary: '#9898B0',
+  textMuted: '#606075',
+  textDisabled: '#40404E',
+
+  // Texto sobre fondos claros (tarjetas crema)
+  textOnLight: '#18181E',
+  textOnLightMuted: '#3A3A4A',
 
   // Bordes
-  border: '#2A2A3E',
-  borderLight: '#3A3A50',
+  border: '#242432',
+  borderLight: '#343448',
 
-  // Gradientes (strings para uso con LinearGradient)
-  gradientPrimary: ['#00D4FF', '#7B2FBE'],
-  gradientDark: ['#0A0A0F', '#12121A'],
-  gradientCard: ['#1A1A26', '#12121A'],
-  gradientSuccess: ['#00FF88', '#00CC6A'],
-  gradientGaming: ['#FF4757', '#FF6B35'],
+  // Gradientes
+  gradientPrimary: ['#4A8ED6', '#7264B8'],
+  gradientDark: ['#0A0A0F', '#14141E'],
+  gradientCard: ['#1C1C28', '#14141E'],
+  gradientSuccess: ['#4E9E7A', '#3E8A6A'],
+  gradientGaming: ['#C85858', '#C88050'],
 
   // Categorías de PC
-  categoryGaming: '#FF4757',
-  categoryProgramming: '#00D4FF',
-  categoryDesign: '#FF6B35',
-  categoryVideo: '#7B2FBE',
-  categoryOffice: '#00FF88',
-  categoryStreaming: '#FFB800',
-  categoryStudent: '#4ECDC4',
+  categoryGaming: '#C85858',
+  categoryProgramming: '#4A8ED6',
+  categoryDesign: '#C88050',
+  categoryVideo: '#7264B8',
+  categoryOffice: '#4E9E7A',
+  categoryStreaming: '#C8924E',
+  categoryStudent: '#5AB8B0',
 
   // Overlay
-  overlay: 'rgba(0, 0, 0, 0.7)',
-  overlayLight: 'rgba(0, 0, 0, 0.4)',
+  overlay: 'rgba(0, 0, 0, 0.75)',
+  overlayLight: 'rgba(0, 0, 0, 0.45)',
 };
