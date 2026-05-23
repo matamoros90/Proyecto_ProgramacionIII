@@ -1,22 +1,33 @@
 import axios from 'axios';
 import { auth } from './firebase.config';
-
 import Constants from 'expo-constants';
 
-// Obtener IP del host de Expo para conectar al backend local
-function getDevHost(): string {
-  const hostUri = Constants.expoConfig?.hostUri; // "ip:port" en LAN, "tunnel.exp.direct:443" en tunnel
+// ─── URL del backend ────────────────────────────────────────────────────────
+//
+// PRODUCCIÓN: URL de Railway (se usa cuando __DEV__ === false o en Expo Go
+// cuando el backend local no está disponible)
+//
+// ¡IMPORTANTE! Cuando hagas deploy en Railway, reemplaza esta URL con la tuya:
+const RAILWAY_URL = 'https://zonapc-backend-production.up.railway.app/api';
+//
+// DESARROLLO LOCAL: detecta la IP de la máquina que corre el backend.
+// Solo funciona si el compañero también está corriendo el backend localmente
+// y en la misma red WiFi.
+//
+function getLocalBackendUrl(): string {
+  const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri) {
     const host = hostUri.split(':')[0];
-    // Si es una IP local (ej: 192.168.1.13) usarla; si es un dominio de tunnel (ej: xxx.exp.direct) ignorarla
-    if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return host;
+    // Solo usar si es una IP local (LAN), no un dominio de tunnel
+    if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) {
+      return `http://${host}:3000/api`;
+    }
   }
-  return '192.168.1.13'; // IP local fallback
+  // En tunnel o sin IP local → usar Railway
+  return RAILWAY_URL;
 }
 
-const BASE_URL = __DEV__
-  ? `http://${getDevHost()}:3000/api`
-  : 'https://api.zonapcbuilder.com/api';
+const BASE_URL = __DEV__ ? getLocalBackendUrl() : RAILWAY_URL;
 
 const api = axios.create({
   baseURL: BASE_URL,
