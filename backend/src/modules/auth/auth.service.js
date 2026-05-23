@@ -74,4 +74,28 @@ async function updateUserProfile(uid, updates) {
   await getDb().collection('users').doc(uid).set(allowed, { merge: true });
 }
 
-module.exports = { getUserProfile, createUserProfile, updateFcmToken, setAdminRole, setVendorRole, listVendors, updateUserProfile };
+async function createVendorUser(email, password, displayName) {
+  const userRecord = await getAuth().createUser({ email, password, displayName });
+  await getAuth().setCustomUserClaims(userRecord.uid, { vendor: true });
+  const profile = await createUserProfile(userRecord.uid, { displayName, email, role: 'vendor' });
+  return profile;
+}
+
+async function deleteVendorUser(uid) {
+  // Eliminar de Firebase Auth
+  await getAuth().deleteUser(uid);
+  // Eliminar perfil de Firestore
+  await getDb().collection('users').doc(uid).delete();
+  // Liberar cotizaciones activas de este vendedor (vuelven al pool de disponibles)
+  const quotesSnap = await getDb().collection('quotes')
+    .where('vendorId', '==', uid)
+    .where('status', 'in', ['in_review', 'ready', 'accepted'])
+    .get();
+  const batch = getDb().batch();
+  quotesSnap.docs.forEach(doc => {
+    batch.update(doc.ref, { vendorId: null, status: 'confirmed', releasedAt: new Date().toISOString() });
+  });
+  if (!quotesSnap.empty) await batch.commit();
+}
+
+module.exports = { getUserProfile, createUserProfile, updateFcmToken, setAdminRole, setVendorRole, listVendors, updateUserProfile, createVendorUser, deleteVendorUser };

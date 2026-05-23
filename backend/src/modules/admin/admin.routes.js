@@ -13,5 +13,7 @@ router.patch('/orders/:id/assign', ctrl.assignTechnician);
 router.get('/quotes', ctrl.listQuotes);
 router.get('/inventory', ctrl.getInventory);
 router.get('/vendors', ctrl.listVendors);
+router.post('/vendors', ctrl.createVendor);
+router.delete('/vendors/:uid', ctrl.deleteVendor);
 
 module.exports = router;

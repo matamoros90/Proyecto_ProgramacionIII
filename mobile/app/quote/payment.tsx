@@ -76,7 +76,8 @@ export default function PaymentScreen() {
 
     setSubmitting(true);
     try {
-      await submitPayment(quoteId!, { method: 'card', cardNumber: rawCard });
+      // Solo enviamos los últimos 4 dígitos — el número completo nunca sale del dispositivo
+      await submitPayment(quoteId!, { method: 'card', cardLast4: rawCard.slice(-4) });
       showSuccess();
     } catch (err: any) {
       Alert.alert('Error', err.message);
@@ -333,6 +334,7 @@ export default function PaymentScreen() {
                 value={bankRef}
                 onChangeText={setBankRef}
                 autoCapitalize="characters"
+                maxLength={100}
               />
             </View>
 

@@ -1,11 +1,17 @@
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import Constants from 'expo-constants';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../services/firebase.config';
 import { useAuthStore } from '../stores/authStore';
 import api from '../services/api';
+
+// Expo Go SDK 53+ eliminó notificaciones remotas.
+// NO importamos expo-notifications estáticamente — se carga con require() solo en builds nativos.
+const IS_EXPO_GO = Constants.executionEnvironment === 'storeClient';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 SplashScreen.hideAsync().catch(() => {});
@@ -29,7 +35,6 @@ export default function RootLayout() {
   }, []);
 
   // Carga del perfil centralizada aquí (UNA sola llamada por sesión)
-  // Así el hook useAuth no dispara llamadas duplicadas desde cada componente
   useEffect(() => {
     if (!firebaseUser) {
       clearProfile();
@@ -40,6 +45,32 @@ export default function RootLayout() {
       .then((res: any) => { if (!cancelled) setProfile(res.data ?? res); })
       .catch(() => { if (!cancelled) setProfile(null); });
     return () => { cancelled = true; };
+  }, [firebaseUser?.uid]);
+
+  // Registro de token FCM — require() lazy para que el módulo no se inicialice en Expo Go
+  useEffect(() => {
+    if (!firebaseUser || IS_EXPO_GO) return;
+    (async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const N = require('expo-notifications') as typeof import('expo-notifications');
+        if (Platform.OS === 'android') {
+          await N.setNotificationChannelAsync('default', {
+            name: 'ZonaPc Builder',
+            importance: N.AndroidImportance.MAX,
+            vibrationPattern: [0, 250, 250, 250],
+          });
+        }
+        const { status } = await N.requestPermissionsAsync();
+        if (status !== 'granted') return;
+        const tokenData = await N.getDevicePushTokenAsync();
+        if (tokenData?.data) {
+          await api.post('/auth/fcm-token', { token: String(tokenData.data) });
+        }
+      } catch {
+        // No-op: FCM registration es no-crítico
+      }
+    })();
   }, [firebaseUser?.uid]);
 
   // Redirección según estado de autenticación
@@ -71,6 +102,7 @@ export default function RootLayout() {
         <Stack.Screen name="order/[id]" />
         <Stack.Screen name="quote/[id]" />
         <Stack.Screen name="quote/payment" />
+        <Stack.Screen name="admin/vendors" />
         <Stack.Screen name="vendor/dashboard" />
         <Stack.Screen name="profile" />
       </Stack>

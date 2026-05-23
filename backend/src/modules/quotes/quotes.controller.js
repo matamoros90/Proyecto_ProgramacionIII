@@ -76,11 +76,16 @@ async function clientAccept(req, res, next) {
 // Cliente: enviar comprobante de pago
 async function clientPayment(req, res, next) {
   try {
-    const { method, cardNumber, bankRef } = req.body;
+    const { method, cardLast4, bankRef } = req.body;
     if (!method || !['card', 'bank_transfer'].includes(method)) {
       return sendError(res, 400, 'Método de pago inválido');
     }
-    const cardLast4 = cardNumber ? cardNumber.replace(/\s/g, '').slice(-4) : null;
+    if (method === 'card' && (!cardLast4 || !/^\d{4}$/.test(String(cardLast4)))) {
+      return sendError(res, 400, 'Últimos 4 dígitos de tarjeta inválidos');
+    }
+    if (bankRef && String(bankRef).length > 100) {
+      return sendError(res, 400, 'Referencia bancaria demasiado larga');
+    }
     const result = await service.submitPayment(req.params.id, req.user.uid, { method, cardLast4, bankRef });
     if (!result) return sendError(res, 400, 'Cotización no encontrada o no está en estado aceptado');
     sendSuccess(res, result, 'Pago enviado, pendiente de verificación');
@@ -96,7 +101,20 @@ async function verifyPayment(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// Vendedor: mis cotizaciones asignadas
+// Vendedor: tomar una cotización disponible (carrera — primer en llegar gana)
+async function claimQuote(req, res, next) {
+  try {
+    const quote = await service.claimQuote(req.params.id, req.user.uid);
+    sendSuccess(res, quote, 'Cotización tomada exitosamente');
+  } catch (err) {
+    if (err.message.includes('ya fue tomada') || err.message.includes('no está disponible') || err.message.includes('no encontrada')) {
+      return sendError(res, 409, err.message);
+    }
+    next(err);
+  }
+}
+
+// Vendedor: mis cotizaciones asignadas + disponibles
 async function vendorQuotes(req, res, next) {
   try {
     const quotes = await service.getByVendor(req.user.uid);
@@ -104,8 +122,33 @@ async function vendorQuotes(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// Vendedor: archivar cotización completada (ocultar de su vista, datos se conservan)
+async function archiveQuote(req, res, next) {
+  try {
+    const result = await service.archiveQuote(req.params.id, req.user.uid);
+    sendSuccess(res, result, 'Cotización archivada');
+  } catch (err) {
+    const userErrors = ['Sin permisos', 'Solo se pueden archivar', 'no encontrada'];
+    if (userErrors.some(e => err.message.includes(e))) return sendError(res, 400, err.message);
+    next(err);
+  }
+}
+
+// Vendedor: eliminar cotización sin procesar (elimina de BD, desaparece del cliente también)
+async function deleteQuoteByVendor(req, res, next) {
+  try {
+    const result = await service.deleteQuote(req.params.id, req.user.uid);
+    sendSuccess(res, result, 'Cotización eliminada');
+  } catch (err) {
+    const userErrors = ['Sin permisos', 'No se puede eliminar', 'ya envió pago', 'no encontrada'];
+    if (userErrors.some(e => err.message.includes(e))) return sendError(res, 400, err.message);
+    next(err);
+  }
+}
+
 module.exports = {
   create, list, getOne, confirm,
   assignVendor, vendorFollowup, vendorMarkReady,
-  clientAccept, clientPayment, verifyPayment, vendorQuotes,
+  clientAccept, clientPayment, verifyPayment, vendorQuotes, claimQuote,
+  archiveQuote, deleteQuoteByVendor,
 };

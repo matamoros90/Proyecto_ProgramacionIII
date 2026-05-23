@@ -4,7 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  getVendorQuotes, sendVendorFollowup, markQuoteReady, verifyQuotePayment,
+  getVendorQuotes, claimQuote, sendVendorFollowup, markQuoteReady, verifyQuotePayment,
+  archiveVendorQuote, deleteVendorQuote,
 } from '../../services/orders.service';
 import type { Quote, QuoteStatus } from '../../types';
 import { Colors } from '../../constants/colors';
@@ -14,7 +15,7 @@ import { useAuth } from '../../hooks/useAuth';
 
 const STATUS_COLOR: Record<QuoteStatus, string> = {
   draft:             Colors.textMuted,
-  confirmed:         Colors.textMuted,
+  confirmed:         Colors.primary,
   in_review:         Colors.warning,
   ready:             Colors.accent,
   accepted:          Colors.info,
@@ -25,7 +26,7 @@ const STATUS_COLOR: Record<QuoteStatus, string> = {
 
 const STATUS_LABEL: Record<QuoteStatus, string> = {
   draft:             'Borrador',
-  confirmed:         'Confirmada',
+  confirmed:         'Disponible',
   in_review:         'En revisión',
   ready:             'Lista',
   accepted:          'Aceptada',
@@ -43,6 +44,7 @@ export default function VendorDashboard() {
       { text: 'Cerrar sesión', style: 'destructive', onPress: signOut },
     ]);
   }
+
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -70,6 +72,33 @@ export default function VendorDashboard() {
     load();
   }, [isVendor, isAuthenticated, profileReady]);
 
+  async function handleClaim(quoteId: string) {
+    Alert.alert(
+      'Tomar cotización',
+      '¿Quieres tomar esta cotización? Será asignada a ti y notificarás al cliente.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Tomar',
+          onPress: async () => {
+            setActionLoading(quoteId + '_claim');
+            try {
+              const updated = await claimQuote(quoteId);
+              setQuotes(prev =>
+                prev.map(q => q.id === quoteId ? { ...updated, _isAvailable: false } as any : q)
+              );
+              Alert.alert('✓ Cotización tomada', 'El cliente fue notificado. Aparece en "Mis cotizaciones".');
+            } catch (err: any) {
+              Alert.alert('No disponible', err.message);
+            } finally {
+              setActionLoading(null);
+            }
+          },
+        },
+      ]
+    );
+  }
+
   async function handleFollowup(quoteId: string) {
     setActionLoading(quoteId + '_followup');
     try {
@@ -95,7 +124,56 @@ export default function VendorDashboard() {
             try {
               const updated = await markQuoteReady(quoteId);
               setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, status: updated.status } : q));
-              Alert.alert('✓ Cotización lista', 'El cliente recibió una notificación push para revisarla.');
+              Alert.alert('✓ Cotización lista', 'El cliente recibió una notificación para revisarla.');
+            } catch (err: any) {
+              Alert.alert('Error', err.message);
+            } finally {
+              setActionLoading(null);
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  async function handleArchive(quoteId: string) {
+    Alert.alert(
+      'Archivar cotización',
+      'La cotización completada se ocultará de tu panel. Los datos se conservan en la base de datos.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Archivar',
+          onPress: async () => {
+            setActionLoading(quoteId + '_archive');
+            try {
+              await archiveVendorQuote(quoteId);
+              setQuotes(prev => prev.filter(q => q.id !== quoteId));
+            } catch (err: any) {
+              Alert.alert('Error', err.message);
+            } finally {
+              setActionLoading(null);
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  async function handleDelete(quoteId: string) {
+    Alert.alert(
+      'Eliminar cotización',
+      'Se eliminará permanentemente de la base de datos. El cliente tampoco podrá verla. ¿Continuar?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            setActionLoading(quoteId + '_delete');
+            try {
+              await deleteVendorQuote(quoteId);
+              setQuotes(prev => prev.filter(q => q.id !== quoteId));
             } catch (err: any) {
               Alert.alert('Error', err.message);
             } finally {
@@ -119,8 +197,10 @@ export default function VendorDashboard() {
             setActionLoading(quoteId + '_verify');
             try {
               await verifyQuotePayment(quoteId);
-              setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, status: 'payment_verified' as QuoteStatus } : q));
-              Alert.alert('🎉 Pago verificado', 'La orden fue creada en estado "Ensamblaje". El cliente fue notificado.');
+              setQuotes(prev =>
+                prev.map(q => q.id === quoteId ? { ...q, status: 'payment_verified' as QuoteStatus } : q)
+              );
+              Alert.alert('🎉 Pago verificado', 'La orden fue creada. El cliente fue notificado.');
             } catch (err: any) {
               Alert.alert('Error', err.message);
             } finally {
@@ -141,25 +221,29 @@ export default function VendorDashboard() {
     );
   }
 
-  const pending   = quotes.filter(q => q.status === 'in_review').length;
-  const awaitPay  = quotes.filter(q => q.status === 'payment_submitted').length;
+  const available = quotes.filter((q: any) => q._isAvailable);
+  const myQuotes  = quotes.filter((q: any) => !q._isAvailable);
+  const pending   = myQuotes.filter(q => q.status === 'in_review').length;
+  const awaitPay  = myQuotes.filter(q => q.status === 'payment_submitted').length;
 
   return (
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={Colors.primary} />}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={Colors.primary} />
+      }
     >
       <LinearGradient colors={['#DBEAFE', '#EFF6FF']} style={styles.header}>
         <Text style={styles.title}>Panel Vendedor</Text>
-        <Text style={styles.subtitle}>Gestiona tus cotizaciones asignadas</Text>
+        <Text style={styles.subtitle}>Gestiona tus cotizaciones</Text>
       </LinearGradient>
 
-      {/* Métricas rápidas */}
+      {/* Métricas */}
       <View style={styles.metrics}>
         <View style={[styles.metric, { borderColor: Colors.primary }]}>
-          <Text style={styles.metricNum}>{quotes.length}</Text>
-          <Text style={styles.metricLabel}>Total asignadas</Text>
+          <Text style={[styles.metricNum, { color: Colors.primary }]}>{available.length}</Text>
+          <Text style={styles.metricLabel}>Disponibles</Text>
         </View>
         <View style={[styles.metric, { borderColor: Colors.warning }]}>
           <Text style={[styles.metricNum, { color: Colors.warning }]}>{pending}</Text>
@@ -172,13 +256,63 @@ export default function VendorDashboard() {
       </View>
 
       <View style={styles.body}>
-        {quotes.length === 0 ? (
+
+        {/* Cotizaciones disponibles para tomar */}
+        {available.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="flash-outline" size={18} color={Colors.primary} />
+              <Text style={styles.sectionTitle}>Cotizaciones disponibles</Text>
+            </View>
+            {available.map(quote => (
+              <View key={quote.id} style={[styles.card, styles.availableCard]}>
+                <View style={styles.cardHeader}>
+                  <View>
+                    <Text style={styles.quoteId}>#{quote.id.slice(-6).toUpperCase()}</Text>
+                    <Text style={styles.category}>{CATEGORY_LABELS[quote.category] ?? quote.category}</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                    <Text style={styles.price}>{formatPrice(quote.totalPrice)}</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: `${Colors.primary}22`, borderColor: Colors.primary }]}>
+                      <Text style={[styles.statusText, { color: Colors.primary }]}>Disponible</Text>
+                    </View>
+                  </View>
+                </View>
+                <Text style={styles.date}>Creada: {formatDate(quote.createdAt)}</Text>
+                <TouchableOpacity
+                  style={styles.claimBtn}
+                  onPress={() => handleClaim(quote.id)}
+                  disabled={actionLoading === quote.id + '_claim'}
+                >
+                  <LinearGradient
+                    colors={[Colors.primary, Colors.primaryDark]}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                    style={styles.claimGradient}
+                  >
+                    <Ionicons name="hand-right-outline" size={16} color="#fff" />
+                    <Text style={styles.claimText}>
+                      {actionLoading === quote.id + '_claim' ? 'Tomando...' : 'Tomar cotización'}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </>
+        )}
+
+        {/* Mis cotizaciones asignadas */}
+        <View style={styles.sectionHeader}>
+          <Ionicons name="briefcase-outline" size={18} color={Colors.textSecondary} />
+          <Text style={styles.sectionTitle}>Mis cotizaciones</Text>
+        </View>
+
+        {myQuotes.length === 0 ? (
           <View style={styles.emptyBox}>
-            <Ionicons name="document-text-outline" size={48} color={Colors.textMuted} />
+            <Ionicons name="document-text-outline" size={40} color={Colors.textMuted} />
             <Text style={styles.emptyText}>No tienes cotizaciones asignadas</Text>
           </View>
         ) : (
-          quotes.map(quote => {
+          myQuotes.map(quote => {
             const color = STATUS_COLOR[quote.status] ?? Colors.textMuted;
             return (
               <View key={quote.id} style={styles.card}>
@@ -197,7 +331,6 @@ export default function VendorDashboard() {
 
                 <Text style={styles.date}>Recibida: {formatDate(quote.createdAt)}</Text>
 
-                {/* Botones según estado */}
                 <View style={styles.actions}>
                   {quote.status === 'in_review' && (
                     <>
@@ -244,17 +377,54 @@ export default function VendorDashboard() {
                   )}
 
                   {quote.status === 'payment_verified' && (
-                    <View style={styles.verifiedBadge}>
-                      <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
-                      <Text style={styles.verifiedText}>Pago verificado — orden creada</Text>
+                    <View style={{ flex: 1, gap: 6 }}>
+                      <View style={styles.verifiedBadge}>
+                        <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
+                        <Text style={styles.verifiedText}>Pago verificado — orden creada</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.actionBtn, { borderColor: Colors.textMuted }]}
+                        onPress={() => handleArchive(quote.id)}
+                        disabled={actionLoading === quote.id + '_archive'}
+                      >
+                        <Ionicons name="archive-outline" size={16} color={Colors.textMuted} />
+                        <Text style={[styles.actionText, { color: Colors.textMuted }]}>
+                          {actionLoading === quote.id + '_archive' ? 'Archivando...' : 'Archivar'}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   )}
 
                   {(quote.status === 'ready' || quote.status === 'accepted') && (
-                    <View style={styles.waitingBadge}>
-                      <Ionicons name="time-outline" size={16} color={Colors.info} />
-                      <Text style={styles.waitingText}>Esperando acción del cliente</Text>
+                    <View style={{ flex: 1, gap: 6 }}>
+                      <View style={styles.waitingBadge}>
+                        <Ionicons name="time-outline" size={16} color={Colors.info} />
+                        <Text style={styles.waitingText}>Esperando acción del cliente</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.actionBtn, { borderColor: Colors.error }]}
+                        onPress={() => handleDelete(quote.id)}
+                        disabled={actionLoading === quote.id + '_delete'}
+                      >
+                        <Ionicons name="trash-outline" size={16} color={Colors.error} />
+                        <Text style={[styles.actionText, { color: Colors.error }]}>
+                          {actionLoading === quote.id + '_delete' ? 'Eliminando...' : 'Eliminar cotización'}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
+                  )}
+
+                  {quote.status === 'in_review' && (
+                    <TouchableOpacity
+                      style={[styles.actionBtn, { borderColor: Colors.error, marginTop: 2 }]}
+                      onPress={() => handleDelete(quote.id)}
+                      disabled={actionLoading === quote.id + '_delete'}
+                    >
+                      <Ionicons name="trash-outline" size={16} color={Colors.error} />
+                      <Text style={[styles.actionText, { color: Colors.error }]}>
+                        {actionLoading === quote.id + '_delete' ? 'Eliminando...' : 'Eliminar'}
+                      </Text>
+                    </TouchableOpacity>
                   )}
                 </View>
               </View>
@@ -283,9 +453,12 @@ const styles = StyleSheet.create({
   metricNum: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.textOnLight },
   metricLabel: { fontSize: FontSize.xs, color: Colors.textOnLightMuted, textAlign: 'center' },
   body: { paddingHorizontal: Spacing.md, gap: Spacing.sm, paddingBottom: Spacing.xxl },
-  emptyBox: { alignItems: 'center', justifyContent: 'center', gap: Spacing.md, paddingVertical: Spacing.xxl },
-  emptyText: { color: Colors.textMuted, fontSize: FontSize.md },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.sm },
+  sectionTitle: { fontSize: FontSize.md, fontWeight: '700', color: Colors.textPrimary },
+  emptyBox: { alignItems: 'center', justifyContent: 'center', gap: Spacing.md, paddingVertical: Spacing.xl },
+  emptyText: { color: Colors.textMuted, fontSize: FontSize.sm },
   card: { backgroundColor: Colors.surface, borderRadius: BorderRadius.md, padding: Spacing.md, borderWidth: 1, borderColor: Colors.border, gap: Spacing.sm },
+  availableCard: { borderColor: Colors.primary, borderWidth: 1.5 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   quoteId: { fontSize: FontSize.md, fontWeight: '800', color: Colors.textPrimary },
   category: { fontSize: FontSize.sm, color: Colors.textMuted, marginTop: 2 },
@@ -293,6 +466,9 @@ const styles = StyleSheet.create({
   statusBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: BorderRadius.sm, borderWidth: 1 },
   statusText: { fontSize: FontSize.xs, fontWeight: '700' },
   date: { fontSize: FontSize.xs, color: Colors.textMuted },
+  claimBtn: { borderRadius: BorderRadius.sm, overflow: 'hidden' },
+  claimGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: Spacing.md },
+  claimText: { fontSize: FontSize.sm, fontWeight: '800', color: '#fff' },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: BorderRadius.sm, paddingHorizontal: Spacing.sm, paddingVertical: 6 },
   actionText: { fontSize: FontSize.sm, fontWeight: '600' },

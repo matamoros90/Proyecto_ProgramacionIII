@@ -85,4 +85,37 @@ async function listVendors(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { getDashboard, listOrders, updateOrderState, assignTechnician, listQuotes, getInventory, listVendors };
+async function createVendor(req, res, next) {
+  try {
+    const { email, password, displayName } = req.body;
+    if (!email || !password || !displayName) {
+      return sendError(res, 400, 'Email, contraseña y nombre son requeridos');
+    }
+    if (password.length < 6) {
+      return sendError(res, 400, 'La contraseña debe tener al menos 6 caracteres');
+    }
+    const vendor = await authService.createVendorUser(email, password, displayName);
+    sendSuccess(res, vendor, 'Vendedor creado exitosamente', 201);
+  } catch (err) {
+    if (err.code === 'auth/email-already-exists') {
+      return sendError(res, 409, 'Ya existe un usuario con ese correo');
+    }
+    next(err);
+  }
+}
+
+async function deleteVendor(req, res, next) {
+  try {
+    const { uid } = req.params;
+    if (!uid) return sendError(res, 400, 'UID requerido');
+    await authService.deleteVendorUser(uid);
+    sendSuccess(res, {}, 'Vendedor eliminado correctamente');
+  } catch (err) {
+    if (err.code === 'auth/user-not-found') {
+      return sendError(res, 404, 'Vendedor no encontrado');
+    }
+    next(err);
+  }
+}
+
+module.exports = { getDashboard, listOrders, updateOrderState, assignTechnician, listQuotes, getInventory, listVendors, createVendor, deleteVendor };

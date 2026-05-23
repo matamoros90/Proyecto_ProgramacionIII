@@ -20,6 +20,13 @@ router.post('/:id/followup', requireVendorOrAdmin, ctrl.vendorFollowup);
 router.patch('/:id/ready', requireVendorOrAdmin, ctrl.vendorMarkReady);
 router.patch('/:id/verify-payment', requireVendorOrAdmin, ctrl.verifyPayment);
 
+// Vendedor: tomar cotización disponible
+router.patch('/:id/claim', requireVendorOrAdmin, ctrl.claimQuote);
+
+// Vendedor: archivar cotización completada / eliminar cotización sin procesar
+router.patch('/:id/archive', requireVendorOrAdmin, ctrl.archiveQuote);
+router.delete('/:id', requireVendorOrAdmin, ctrl.deleteQuoteByVendor);
+
 // Solo admin
 router.patch('/:id/assign', requireAdmin, ctrl.assignVendor);
 

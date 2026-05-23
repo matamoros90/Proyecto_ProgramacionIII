@@ -37,7 +37,7 @@ export async function acceptQuote(
 
 export async function submitPayment(
   quoteId: string,
-  payload: { method: 'card' | 'bank_transfer'; cardNumber?: string; bankRef?: string }
+  payload: { method: 'card' | 'bank_transfer'; cardLast4?: string; bankRef?: string }
 ): Promise<Quote> {
   const res = await api.post(`/quotes/${quoteId}/payment`, payload);
   return (res as any).data;
@@ -48,6 +48,19 @@ export async function submitPayment(
 export async function getVendorQuotes(): Promise<Quote[]> {
   const res = await api.get('/quotes/vendor/assigned');
   return (res as any).data;
+}
+
+export async function claimQuote(quoteId: string): Promise<Quote> {
+  const res = await api.patch(`/quotes/${quoteId}/claim`);
+  return (res as any).data;
+}
+
+export async function archiveVendorQuote(quoteId: string): Promise<void> {
+  await api.patch(`/quotes/${quoteId}/archive`);
+}
+
+export async function deleteVendorQuote(quoteId: string): Promise<void> {
+  await api.delete(`/quotes/${quoteId}`);
 }
 
 export async function sendVendorFollowup(quoteId: string): Promise<void> {

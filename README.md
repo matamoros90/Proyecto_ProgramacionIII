@@ -548,6 +548,111 @@ No necesitan correr el backend, no necesitan credenciales de Firebase, no necesi
 
 ---
 
+---
+
+## Actualización — 23 de Mayo 2026
+
+### Nuevas funcionalidades: gestión de empleados y cotizaciones del vendedor
+
+#### Panel del vendedor — Archivar y eliminar cotizaciones
+
+Se añadieron dos acciones sobre cotizaciones en `mobile/app/vendor/dashboard.tsx`:
+
+| Acción | Cuándo | Qué hace |
+|--------|--------|----------|
+| **Archivar** | Estado `payment_verified` | Oculta la cotización del panel del vendedor. Los datos **se conservan** en Firestore (la cotización generó ingresos). |
+| **Eliminar** | Estados `in_review`, `ready`, `accepted` | Borra el documento de Firestore por completo. La cotización **desaparece también de la vista del cliente** (nunca generó ingresos). No se permite si el cliente ya envió pago. |
+
+Nuevas rutas del backend:
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| `PATCH` | `/api/quotes/:id/archive` | Vendedor/Admin | Marca la cotización como archivada (`archived: true`) |
+| `DELETE` | `/api/quotes/:id` | Vendedor/Admin | Elimina el documento de cotización de Firestore |
+
+Archivos modificados:
+
+| Archivo | Cambio |
+|---------|--------|
+| `mobile/app/vendor/dashboard.tsx` | Handlers `handleArchive` y `handleDelete`; botones en cada tarjeta de cotización |
+| `mobile/services/orders.service.ts` | Nuevas funciones `archiveVendorQuote` y `deleteVendorQuote` |
+| `backend/src/modules/quotes/quotes.routes.js` | Rutas `PATCH /:id/archive` y `DELETE /:id` |
+| `backend/src/modules/quotes/quotes.controller.js` | Funciones `archiveQuote` y `deleteQuoteByVendor` |
+| `backend/src/modules/quotes/quotes.service.js` | Lógica `archiveQuote` y `deleteQuote`; `getByVendor` filtra archivadas |
+
+---
+
+#### Panel de administración — Gestionar Empleados
+
+Se renombró la sección "Gestionar Vendedores" a **"Gestionar Empleados"** en toda la interfaz y se agregó el botón de eliminar empleado.
+
+| Cambio | Archivo |
+|--------|---------|
+| Título, formulario y lista renombrados ("Empleados") | `mobile/app/admin/vendors.tsx` |
+| Nav item renombrado ("Gestionar Empleados") | `mobile/app/admin/dashboard.tsx` |
+| Botón eliminar (ícono papelera) con confirmación en cada fila | `mobile/app/admin/vendors.tsx` |
+| Nueva función `handleDeleteVendor(uid, name)` | `mobile/app/admin/vendors.tsx` |
+| Nueva ruta `DELETE /api/admin/vendors/:uid` | `backend/src/modules/admin/admin.routes.js` |
+| Nuevo handler `deleteVendor` | `backend/src/modules/admin/admin.controller.js` |
+| Nueva función `deleteVendorUser(uid)` | `backend/src/modules/auth/auth.service.js` |
+
+Al eliminar un empleado:
+1. Se borra su cuenta de Firebase Auth.
+2. Se borra su perfil de Firestore.
+3. Sus cotizaciones activas (`in_review`, `ready`, `accepted`) se liberan automáticamente al grupo de disponibles (estado → `confirmed`, `vendorId` → `null`) mediante un batch write atómico.
+
+---
+
+### Auditoría de seguridad — 23 de Mayo 2026
+
+Se realizó un análisis de seguridad enfocado en el manejo de datos bancarios y datos personales de clientes.
+
+#### Hallazgos y correcciones
+
+| # | Severidad | Problema | Archivo | Corrección |
+|---|-----------|---------|---------|------------|
+| 1 | **CRÍTICO** | El número completo de tarjeta (16 dígitos) se enviaba al backend en el flujo de pago de cotización | `mobile/app/quote/payment.tsx` | El cliente extrae solo los últimos 4 dígitos antes de llamar al API. El número completo **nunca sale del dispositivo**. |
+| 2 | **MEDIO** | Campo `bankRef` sin validación de longitud máxima en el backend | `backend/src/modules/quotes/quotes.controller.js` | Validación explícita: máximo 100 caracteres. Error 400 si se excede. |
+| 3 | **MEDIO** | Backend aceptaba cualquier string como `cardNumber` y lo recortaba él mismo | `backend/src/modules/quotes/quotes.controller.js` | El backend ahora recibe `cardLast4` (ya recortado) y valida que sea exactamente 4 dígitos numéricos. |
+| 4 | **BAJO** | `maxLength` del campo de referencia bancaria no estaba limitado en el formulario | `mobile/app/quote/payment.tsx` | Añadido `maxLength={100}` al `TextInput`. |
+
+#### Lo que ya estaba correcto (confirmado)
+
+| Área | Estado |
+|------|--------|
+| CVV nunca viaja al backend | ✓ Solo se valida en cliente, nunca se serializa |
+| Perfil — tarjeta guardada | ✓ `profile.tsx` ya enviaba solo `last4`, `brand`, `cardHolder`, `expiryMonth`, `expiryYear` |
+| Firebase private key | ✓ `backend/.env` está en `.gitignore`; nunca se sube a git |
+| Firestore Security Rules | ✓ Reglas por colección: clientes solo leen sus datos, órdenes son immutables por cliente, notificaciones solo las escribe el servidor |
+| CORS | ✓ Lista blanca de orígenes via `ALLOWED_ORIGINS` en `.env` |
+| Rate limiting | ✓ 100 req/15 min global; 20 req/15 min en `/api/auth` |
+| Tamaño del body | ✓ Límite de 100 kb (`express.json({ limit: '100kb' })`) |
+| Contraseñas | ✓ Firebase Auth las hashea; el backend nunca las almacena |
+| Inyección NoSQL | ✓ Firestore SDK usa queries tipadas, no strings concatenados |
+| Elevación de roles | ✓ Firestore rules bloquean cambios a `role` y `uid` desde el cliente |
+
+#### Pendientes de producción (sin cambio en código, requieren acción en consolas)
+
+1. **Desplegar Firestore Security Rules** tras cada cambio:
+   ```bash
+   firebase deploy --only firestore:rules
+   ```
+2. **Activar Firebase App Check** en la consola de Firebase para proteger las API keys del cliente.
+3. **HTTPS obligatorio en producción** — Railway proporciona HTTPS automático; nunca exponer el backend en HTTP puro desde un dominio público.
+4. **Reemplazar el flujo de tarjeta por un procesador de pagos real** (Stripe, PayPal, Mercado Pago) antes de procesar pagos reales. El flujo actual es una simulación: solo almacena los últimos 4 dígitos y no realiza cargos reales.
+
+---
+
+#### Corrección de disponibilidad — Backend no reflejaba cambios tras reinicio
+
+**Causa:** El proceso `node src/server.js` iniciado antes de que se guardaran los cambios de la sesión seguía corriendo con el código antiguo (las rutas `DELETE` no estaban registradas en memoria), lo que generaba errores 404 al intentar eliminar cotizaciones o empleados.
+
+**Corrección inmediata:** Matar el proceso viejo y reiniciar con el código actualizado.
+
+**Recomendación:** Usar `npm run dev` (nodemon) durante desarrollo — reinicia automáticamente al guardar cualquier archivo del backend.
+
+---
+
 ## Documentación
 
 - [Arquitectura del Backend](backend/README.md)

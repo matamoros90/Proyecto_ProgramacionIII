@@ -159,6 +159,7 @@ export default function AdminDashboard() {
         {/* Navegación admin */}
         <Text style={styles.sectionTitle}>Gestión</Text>
         {[
+          { label: 'Gestionar Empleados', icon: 'people-outline', route: '/admin/vendors' },
           { label: 'Gestionar Inventario', icon: 'cube-outline', route: '/admin/inventory' },
           { label: 'Ver Cotizaciones', icon: 'document-text-outline', route: '/admin/quotes' },
           { label: 'Gestionar Órdenes', icon: 'list-outline', route: '/admin/orders' },

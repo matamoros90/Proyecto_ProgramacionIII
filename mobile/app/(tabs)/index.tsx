@@ -26,7 +26,7 @@ const QUICK_ACTIONS = [
 ];
 
 export default function HomeScreen() {
-  const { profile, profileReady, isAdmin, isVendor, isAuthenticated } = useAuth();
+  const { profile, profileReady, isAdmin, isVendor, isAuthenticated, user } = useAuth();
 
   // Redirige al panel correcto cuando el perfil termina de cargar
   useEffect(() => {
@@ -44,7 +44,10 @@ export default function HomeScreen() {
     );
   }
 
-  const firstName = profile?.displayName?.split(' ')[0] ?? 'Builder';
+  const firstName =
+    profile?.displayName?.split(' ')[0] ??
+    user?.displayName?.split(' ')[0] ??
+    'Builder';
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>

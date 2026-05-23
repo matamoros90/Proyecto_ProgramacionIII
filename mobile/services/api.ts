@@ -2,32 +2,22 @@ import axios from 'axios';
 import { auth } from './firebase.config';
 import Constants from 'expo-constants';
 
-// ─── URL del backend ────────────────────────────────────────────────────────
-//
-// PRODUCCIÓN: URL de Railway (se usa cuando __DEV__ === false o en Expo Go
-// cuando el backend local no está disponible)
-//
-// ¡IMPORTANTE! Cuando hagas deploy en Railway, reemplaza esta URL con la tuya:
 const RAILWAY_URL = 'https://zonapc-backend-production.up.railway.app/api';
-//
-// DESARROLLO LOCAL: detecta la IP de la máquina que corre el backend.
-// Solo funciona si el compañero también está corriendo el backend localmente
-// y en la misma red WiFi.
-//
-function getLocalBackendUrl(): string {
+
+function resolveBackendUrl(): string {
+  // Detecta la IP local automáticamente cuando el dispositivo está en la misma red WiFi
   const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri) {
     const host = hostUri.split(':')[0];
-    // Solo usar si es una IP local (LAN), no un dominio de tunnel
     if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) {
       return `http://${host}:3000/api`;
     }
   }
-  // En tunnel o sin IP local → usar Railway
+  // Fuera de LAN (tunnel u otro) → Railway
   return RAILWAY_URL;
 }
 
-const BASE_URL = __DEV__ ? getLocalBackendUrl() : RAILWAY_URL;
+const BASE_URL = resolveBackendUrl();
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -35,7 +25,6 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Adjunta token Firebase automáticamente en cada request
 api.interceptors.request.use(async (config) => {
   const user = auth.currentUser;
   if (user) {

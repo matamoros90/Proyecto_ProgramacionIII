@@ -51,4 +51,11 @@ async function saveNotification(userId, { title, body, type, orderId }) {
   });
 }
 
-module.exports = { sendToUser, saveNotification };
+async function sendToAllVendors({ title, body, data = {} }) {
+  const snapshot = await getDb().collection('users').where('role', '==', 'vendor').get();
+  if (snapshot.empty) return;
+  const sends = snapshot.docs.map(doc => sendToUser(doc.id, { title, body, data }));
+  await Promise.allSettled(sends);
+}
+
+module.exports = { sendToUser, saveNotification, sendToAllVendors };
