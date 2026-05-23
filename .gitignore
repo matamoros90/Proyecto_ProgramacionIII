@@ -30,3 +30,7 @@ Thumbs.db
 # Expo
 *.orig.*
 web-build/
+
+# Carpetas nativas generadas por expo prebuild (EAS las genera en la nube)
+mobile/android/
+mobile/ios/
