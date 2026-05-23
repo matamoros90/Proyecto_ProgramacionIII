@@ -44,7 +44,11 @@
       "enabled": false
     },
     "extra": {
-      "router": {}
-    }
+      "router": {},
+      "eas": {
+        "projectId": "9e756671-56ab-4cf9-9f90-0d7236d02c71"
+      }
+    },
+    "owner": "matamoros"
   }
 }
