@@ -11,7 +11,67 @@ import { useBuilder } from '../../hooks/useBuilder';
 import { Colors } from '../../constants/colors';
 import { Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { formatPrice, COMPONENT_LABELS } from '../../utils/formatters';
-import type { Component, ComponentType } from '../../types';
+import type { Component, ComponentType, Build } from '../../types';
+
+// ─── Lógica de compatibilidad client-side ────────────────────────────────────
+
+function caseSupportsFormFactor(caseType: string, mbFormFactor: string): boolean {
+  const ct = caseType.toUpperCase().replace(/[-\s]/g, '');
+  const mf = mbFormFactor.toUpperCase().replace(/[-\s]/g, '');
+  if (ct.includes('MINIITX') || (ct.includes('MINI') && ct.includes('ITX'))) {
+    return mf.includes('ITX');
+  }
+  if (ct.includes('MATX') || ct.includes('MICROATX')) {
+    return mf.includes('MATX') || mf.includes('ITX');
+  }
+  return true; // ATX o desconocido: soporta todo
+}
+
+function getIncompatibleReason(
+  item: Component,
+  compType: ComponentType,
+  build: Build
+): string | null {
+  // CPU ↔ Motherboard: mismo socket
+  if (compType === 'motherboard' && build.cpu?.socket && item.socket) {
+    if (item.socket !== build.cpu.socket)
+      return `Socket ${item.socket} · CPU requiere ${build.cpu.socket}`;
+  }
+  if (compType === 'cpu' && build.motherboard?.socket && item.socket) {
+    if (item.socket !== build.motherboard.socket)
+      return `Socket ${item.socket} · MB tiene ${build.motherboard.socket}`;
+  }
+
+  // RAM ↔ Motherboard: mismo tipo DDR
+  if (compType === 'ram' && build.motherboard?.ramType && item.ramType) {
+    if (item.ramType !== build.motherboard.ramType)
+      return `${item.ramType} · MB soporta ${build.motherboard.ramType}`;
+  }
+  if (compType === 'motherboard' && build.ram?.ramType && item.ramType) {
+    if (item.ramType !== build.ram.ramType)
+      return `MB ${item.ramType} · RAM es ${build.ram.ramType}`;
+  }
+
+  // Cooling ↔ CPU TDP
+  if (compType === 'cooling' && build.cpu?.tdp && item.maxTdp) {
+    if (item.maxTdp < build.cpu.tdp)
+      return `Soporta ${item.maxTdp}W · CPU necesita ${build.cpu.tdp}W`;
+  }
+
+  // Case ↔ Motherboard factor de forma
+  if (compType === 'case' && build.motherboard?.formFactor && item.caseType) {
+    if (!caseSupportsFormFactor(item.caseType, build.motherboard.formFactor))
+      return `No soporta MB ${build.motherboard.formFactor}`;
+  }
+  if (compType === 'motherboard' && build.case?.caseType && item.formFactor) {
+    if (!caseSupportsFormFactor(build.case.caseType, item.formFactor))
+      return `MB ${item.formFactor} no cabe en el gabinete`;
+  }
+
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function ComponentSelectorScreen() {
   const { type } = useLocalSearchParams<{ type: string }>();
@@ -85,30 +145,58 @@ export default function ComponentSelectorScreen() {
     return specs.slice(0, 3).join(' · ');
   }
 
+  // Conteo para el subtítulo
+  const compatibleCount = filtered.filter(
+    (c) => c.id === selected?.id || !getIncompatibleReason(c, compType, build)
+  ).length;
+  const hasFilters = !!(build.cpu || build.motherboard || build.ram || build.case);
+
   function renderItem({ item }: { item: Component }) {
     const isSelected = selected?.id === item.id;
-    const isLoading = selecting === item.id;
+    const isProcessing = selecting === item.id;
+    const incompatibleReason = isSelected
+      ? null
+      : getIncompatibleReason(item, compType, build);
+    const isIncompatible = !!incompatibleReason;
 
     return (
       <TouchableOpacity
-        onPress={() => handleSelect(item)}
-        disabled={!!selecting}
-        style={[styles.card, isSelected && styles.cardSelected]}
+        onPress={() => !isIncompatible && handleSelect(item)}
+        disabled={!!selecting || isIncompatible}
+        activeOpacity={isIncompatible ? 1 : 0.7}
+        style={[
+          styles.card,
+          isSelected && styles.cardSelected,
+          isIncompatible && styles.cardIncompatible,
+        ]}
       >
+        {/* Imagen del componente */}
         <View style={styles.cardLeft}>
           {item.image ? (
-            <Image source={{ uri: item.image }} style={styles.componentImage} resizeMode="cover" />
+            <Image
+              source={{ uri: item.image }}
+              style={[styles.componentImage, isIncompatible && styles.imageIncompatible]}
+              resizeMode="cover"
+            />
           ) : (
-            <View style={[styles.componentImage, styles.imagePlaceholder]}>
+            <View style={[styles.componentImage, styles.imagePlaceholder, isIncompatible && styles.imageIncompatible]}>
               <Ionicons name="hardware-chip-outline" size={28} color={Colors.textMuted} />
+            </View>
+          )}
+          {isIncompatible && (
+            <View style={styles.lockOverlay}>
+              <Ionicons name="lock-closed" size={16} color="#fff" />
             </View>
           )}
         </View>
 
-        <View style={styles.cardBody}>
+        {/* Cuerpo */}
+        <View style={[styles.cardBody, isIncompatible && styles.bodyIncompatible]}>
           <View style={styles.cardHeader}>
-            <Text style={styles.brand}>{item.brand}</Text>
-            {!item.inStock && (
+            <Text style={[styles.brand, isIncompatible && styles.textMutedColor]}>
+              {item.brand}
+            </Text>
+            {!item.inStock && !isIncompatible && (
               <View style={styles.outOfStock}>
                 <Text style={styles.outOfStockText}>Sin stock</Text>
               </View>
@@ -119,23 +207,44 @@ export default function ComponentSelectorScreen() {
                 <Text style={styles.selectedBadgeText}>Elegido</Text>
               </View>
             )}
+            {isIncompatible && (
+              <View style={styles.incompatibleBadge}>
+                <Ionicons name="ban-outline" size={10} color="#fff" />
+                <Text style={styles.incompatibleBadgeText}>Incompatible</Text>
+              </View>
+            )}
           </View>
 
-          <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
-          <Text style={styles.specs} numberOfLines={1}>{renderSpecs(item)}</Text>
+          <Text
+            style={[styles.name, isIncompatible && styles.textMutedColor]}
+            numberOfLines={2}
+          >
+            {item.name}
+          </Text>
+
+          <Text style={[styles.specs, isIncompatible && styles.incompatibleReason]} numberOfLines={1}>
+            {isIncompatible ? incompatibleReason! : renderSpecs(item)}
+          </Text>
 
           <View style={styles.cardFooter}>
-            <Text style={styles.price}>{formatPrice(item.price)}</Text>
-            <View style={styles.scoreRow}>
-              <Ionicons name="flash" size={12} color={Colors.accent} />
-              <Text style={styles.score}>{item.performanceScore}</Text>
-            </View>
+            <Text style={[styles.price, isIncompatible && styles.textMutedColor]}>
+              {formatPrice(item.price)}
+            </Text>
+            {!isIncompatible && (
+              <View style={styles.scoreRow}>
+                <Ionicons name="flash" size={12} color={Colors.accent} />
+                <Text style={styles.score}>{item.performanceScore}</Text>
+              </View>
+            )}
           </View>
         </View>
 
+        {/* Flecha / check / lock */}
         <View style={styles.cardArrow}>
-          {isLoading ? (
+          {isProcessing ? (
             <ActivityIndicator size="small" color={Colors.primary} />
+          ) : isIncompatible ? (
+            <Ionicons name="lock-closed" size={20} color={`${Colors.textMuted}88`} />
           ) : (
             <Ionicons
               name={isSelected ? 'checkmark-circle' : 'chevron-forward'}
@@ -155,7 +264,11 @@ export default function ComponentSelectorScreen() {
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>Elige tu {label}</Text>
-        <Text style={styles.subtitle}>{components.length} opciones disponibles</Text>
+        <Text style={styles.subtitle}>
+          {hasFilters
+            ? `${compatibleCount} compatibles de ${filtered.length} opciones`
+            : `${filtered.length} opciones disponibles`}
+        </Text>
 
         <View style={styles.searchWrapper}>
           <Ionicons name="search" size={18} color={Colors.textMuted} />
@@ -231,6 +344,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md },
   loadingText: { color: Colors.textMuted, fontSize: FontSize.md },
   emptyText: { color: Colors.textMuted, fontSize: FontSize.md },
+
+  // Card base
   card: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: Colors.surface,
@@ -239,14 +354,29 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardSelected: { borderColor: Colors.primary, borderWidth: 2 },
-  cardLeft: { width: 80, height: 80 },
+  cardIncompatible: {
+    borderColor: `${Colors.error}33`,
+    backgroundColor: `${Colors.error}06`,
+  },
+
+  // Imagen
+  cardLeft: { width: 80, height: 80, position: 'relative' },
   componentImage: { width: 80, height: 80 },
   imagePlaceholder: {
     backgroundColor: Colors.surfaceElevated,
     alignItems: 'center', justifyContent: 'center',
   },
+  imageIncompatible: { opacity: 0.35 },
+  lockOverlay: {
+    position: 'absolute', inset: 0,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+
+  // Cuerpo
   cardBody: { flex: 1, padding: Spacing.sm, gap: 3 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  bodyIncompatible: { opacity: 0.55 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, flexWrap: 'wrap' },
   brand: { fontSize: FontSize.xs, color: Colors.primary, fontWeight: '700', textTransform: 'uppercase' },
   outOfStock: {
     backgroundColor: `${Colors.error}22`, borderRadius: 4,
@@ -259,8 +389,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6, paddingVertical: 1,
   },
   selectedBadgeText: { fontSize: 10, color: '#fff', fontWeight: '700' },
+  incompatibleBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: Colors.error, borderRadius: 4,
+    paddingHorizontal: 6, paddingVertical: 1,
+  },
+  incompatibleBadgeText: { fontSize: 10, color: '#fff', fontWeight: '700' },
   name: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.textPrimary },
   specs: { fontSize: 11, color: Colors.textSecondary },
+  incompatibleReason: { fontSize: 11, color: Colors.error, fontWeight: '500' },
+  textMutedColor: { color: Colors.textMuted },
   cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 },
   price: { fontSize: FontSize.sm, fontWeight: '800', color: Colors.accent },
   scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },

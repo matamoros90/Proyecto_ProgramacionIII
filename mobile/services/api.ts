@@ -8,7 +8,7 @@ import Constants from 'expo-constants';
 // cuando el backend local no está disponible)
 //
 // ¡IMPORTANTE! Cuando hagas deploy en Railway, reemplaza esta URL con la tuya:
-const RAILWAY_URL = 'https://zonapc-backend-production.up.railway.app/api';
+const RAILWAY_URL = 'https://regarding-carter-graphs-always.trycloudflare.com/api';
 //
 // DESARROLLO LOCAL: detecta la IP de la máquina que corre el backend.
 // Solo funciona si el compañero también está corriendo el backend localmente

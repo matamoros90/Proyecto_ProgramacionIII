@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, Alert,
+  StyleSheet, KeyboardAvoidingView, Platform, Alert, Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -40,9 +40,11 @@ export default function LoginScreen() {
       >
         {/* Logo */}
         <View style={styles.logoSection}>
-          <View style={styles.logoIcon}>
-            <Ionicons name="hardware-chip" size={48} color={Colors.primary} />
-          </View>
+          <Image
+            source={require('../../assets/images/logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <Text style={styles.appName}>ZonaPc Builder</Text>
           <Text style={styles.tagline}>Arma tu PC perfecta</Text>
         </View>
@@ -123,6 +125,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   inner: { flex: 1, justifyContent: 'center', padding: Spacing.lg },
   logoSection: { alignItems: 'center', marginBottom: Spacing.xxl },
+  logoImage: { width: 150, height: 150, marginBottom: Spacing.md, backgroundColor: 'transparent' },
   logoIcon: {
     width: 96, height: 96, borderRadius: 24,
     backgroundColor: Colors.primaryGlow,

@@ -548,6 +548,117 @@ No necesitan correr el backend, no necesitan credenciales de Firebase, no necesi
 
 ---
 
+## Actualización — 23 de Mayo 2026
+
+### Compatibilidad en tiempo real, imágenes reales y nuevo logotipo
+
+---
+
+### 1. Sistema de compatibilidad en tiempo real (`mobile/app/builder/[type].tsx`)
+
+Se reescribió completamente la pantalla de selección de componentes para bloquear automáticamente las piezas incompatibles con el build actual.
+
+**Reglas implementadas:**
+
+| Combinación | Validación |
+|-------------|-----------|
+| CPU ↔ Motherboard | El socket del componente debe coincidir con el de la placa base ya seleccionada |
+| RAM ↔ Motherboard | El tipo DDR (DDR4 / DDR5) debe coincidir con lo que soporta la placa |
+| Cooling ↔ CPU | `cooling.maxTdp` debe ser mayor o igual al `cpu.tdp` |
+| Case ↔ Motherboard | ATX soporta todos; mATX soporta mATX e ITX; ITX solo soporta ITX |
+
+**Comportamiento visual:**
+- Componentes **incompatibles**: opacidad 35%, deshabilitados, badge rojo "Incompatible", ícono candado, razón en rojo.
+- Componentes **compatibles**: comportamiento normal sin cambios.
+- Subtítulo muestra: *"X compatibles de Y opciones"*.
+
+| Archivo | Cambio |
+|---------|--------|
+| `mobile/app/builder/[type].tsx` | Función `getIncompatibleReason()` con 4 reglas; UI diferenciada por estado |
+
+---
+
+### 2. Imagen real del componente en el build (`mobile/app/builder/custom.tsx`)
+
+La pantalla de resumen del build ahora muestra la imagen real del componente (campo `image` de Firestore) en lugar del ícono genérico.
+
+- Si el componente tiene imagen → miniatura 56×56 con `resizeMode="contain"`.
+- Si no tiene imagen → el ícono de categoría anterior (sin cambio de comportamiento).
+
+| Archivo | Cambio |
+|---------|--------|
+| `mobile/app/builder/custom.tsx` | Añadida imagen real por componente; estilo `componentThumb` |
+
+---
+
+### 3. Nuevo logotipo en la pantalla de login (`mobile/app/(auth)/login.tsx`)
+
+Se reemplazó el ícono genérico de hardware por el logotipo oficial de ZonaPc Builder.
+
+- Asset: `mobile/assets/images/logo.png` (pin ZPC — logo oficial del proyecto)
+- Dimensión en pantalla: 150×150 con fondo transparente.
+
+| Archivo | Cambio |
+|---------|--------|
+| `mobile/assets/images/logo.png` | Nuevo archivo — logotipo oficial ZPC |
+| `mobile/app/(auth)/login.tsx` | `<Image>` en lugar de `<Ionicons>`; estilo `logoImage` |
+
+---
+
+### 4. Compatibilidad con Expo Go (`mobile/app.json`)
+
+Se eliminaron configuraciones propias de EAS Build que rompían la carga en Expo Go:
+
+| Propiedad eliminada | Motivo |
+|---------------------|--------|
+| `owner` | Forzaba autenticación de cuenta Expo en modo interactivo |
+| `runtimeVersion` | Generaba versión `"1.0.0"` en lugar de `exposdk:54.0.0`, bloqueando Expo Go SDK 54 |
+| `updates.url` | Activaba el módulo nativo `expo-updates` que intentaba descargar una OTA inexistente |
+| `extra.eas.projectId` | Mismo efecto que `updates.url` — activa descarga remota automáticamente |
+| `googleServicesFile` (android/ios) | No requerido para Expo Go; solo para builds nativos con EAS |
+
+Se añadió `"updates": { "enabled": false }` para deshabilitar explícitamente OTA en desarrollo.
+
+---
+
+### 5. Conectividad del backend via Cloudflare Tunnel
+
+Cuando el teléfono está en LTE (sin acceso a la red local), la app usa un túnel de Cloudflare para alcanzar el backend.
+
+**`mobile/services/api.ts` — lógica de selección de URL:**
+- Red local (LAN, IP detectada via `Constants.expoConfig.hostUri`) → `http://<IP>:3000/api`
+- Modo tunnel / LTE → URL de Cloudflare (línea 11 del archivo)
+
+> **Importante:** La URL de Cloudflare cambia cada vez que se reinicia el túnel. Al iniciar una nueva sesión de desarrollo con LTE, actualizar la constante `RAILWAY_URL` en `mobile/services/api.ts` línea 11 con la nueva URL generada por `cloudflared tunnel`.
+
+**Comando para levantar el backend con túnel:**
+```bash
+# Terminal 1 — Backend
+cd backend && npm run dev
+
+# Terminal 2 — Túnel Cloudflare (expone puerto 3000)
+cloudflared tunnel --url http://localhost:3000
+
+# Terminal 3 — Expo
+cd mobile && npx expo start --tunnel
+```
+
+---
+
+### Resumen de archivos modificados
+
+| Archivo | Cambio |
+|---------|--------|
+| `mobile/app.json` | Eliminadas propiedades de EAS; `updates.enabled: false` |
+| `mobile/services/api.ts` | URL de Cloudflare; detección automática LAN vs tunnel |
+| `mobile/app/builder/[type].tsx` | Compatibilidad en tiempo real (socket, DDR, TDP, form factor) |
+| `mobile/app/builder/custom.tsx` | Imagen real del componente seleccionado |
+| `mobile/app/(auth)/login.tsx` | Nuevo logotipo oficial |
+| `mobile/assets/images/logo.png` | Logotipo oficial ZPC (nuevo archivo) |
+| `backend/src/config/app.js` | CORS abierto en modo development para túneles y Expo Go |
+
+---
+
 ## Documentación
 
 - [Arquitectura del Backend](backend/README.md)

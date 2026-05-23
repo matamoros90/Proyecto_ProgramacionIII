@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, Alert,
+  TouchableOpacity, Alert, Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -112,13 +112,17 @@ export default function CustomBuilderScreen() {
               style={[styles.componentRow, component && styles.componentRowFilled]}
               onPress={() => router.push(`/builder/${type}` as any)}
             >
-              <View style={[styles.componentIcon, { backgroundColor: component ? Colors.primaryGlow : Colors.surfaceElevated }]}>
-                <Ionicons
-                  name={(COMPONENT_ICONS[type] as any) || 'hardware-chip-outline'}
-                  size={22}
-                  color={component ? Colors.primary : Colors.textMuted}
-                />
-              </View>
+              {component?.image ? (
+                <Image source={{ uri: component.image }} style={styles.componentThumb} resizeMode="contain" />
+              ) : (
+                <View style={[styles.componentIcon, { backgroundColor: component ? Colors.primaryGlow : Colors.surfaceElevated }]}>
+                  <Ionicons
+                    name={(COMPONENT_ICONS[type] as any) || 'hardware-chip-outline'}
+                    size={22}
+                    color={component ? Colors.primary : Colors.textMuted}
+                  />
+                </View>
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={styles.componentType}>{COMPONENT_LABELS[type]}</Text>
                 {component ? (
@@ -233,6 +237,7 @@ const styles = StyleSheet.create({
   },
   componentRowFilled: { borderColor: Colors.borderLight },
   componentIcon: { width: 44, height: 44, borderRadius: BorderRadius.sm, alignItems: 'center', justifyContent: 'center' },
+  componentThumb: { width: 56, height: 56, borderRadius: BorderRadius.sm, backgroundColor: Colors.surfaceElevated },
   componentType: { fontSize: FontSize.xs, color: Colors.textMuted, fontWeight: '600', textTransform: 'uppercase' },
   componentName: { fontSize: FontSize.md, color: Colors.textPrimary, fontWeight: '600', marginTop: 2 },
   componentPrice: { fontSize: FontSize.sm, color: Colors.primary, fontWeight: '700', marginTop: 1 },
