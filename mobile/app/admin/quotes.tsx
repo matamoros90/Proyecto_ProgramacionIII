@@ -114,7 +114,7 @@ export default function AdminQuotes() {
                       <View style={[styles.tag, { borderColor: Colors.primary }]}>
                         <Ionicons name="person-outline" size={12} color={Colors.primary} />
                         <Text style={[styles.tagText, { color: Colors.primary }]}>
-                          VND-{String(quote.vendorId).slice(-4).toUpperCase()}
+                          {quote.vendorName ?? `EMP-${String(quote.vendorId).slice(-4).toUpperCase()}`}
                         </Text>
                       </View>
                     )}

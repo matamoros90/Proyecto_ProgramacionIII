@@ -122,6 +122,7 @@ export interface Quote {
   id: string;
   userId: string;
   vendorId?: string;
+  vendorName?: string;
   build: Build;
   totalPrice: number;
   category: PcCategory;

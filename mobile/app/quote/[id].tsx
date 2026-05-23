@@ -62,7 +62,11 @@ export default function QuoteDetail() {
           <View style={{ flex: 1 }}>
             <Text style={[styles.statusLabel, { color: cfg.color }]}>{cfg.label}</Text>
             {quote.status === 'in_review' && (
-              <Text style={styles.statusDesc}>Nuestro equipo está revisando tu cotización.</Text>
+              <Text style={styles.statusDesc}>
+                {(quote as any).vendorName
+                  ? `${(quote as any).vendorName} está revisando tu cotización.`
+                  : 'Nuestro equipo está revisando tu cotización.'}
+              </Text>
             )}
             {quote.status === 'ready' && (
               <Text style={styles.statusDesc}>Tu cotización está lista. Revisa los detalles y acepta para continuar.</Text>

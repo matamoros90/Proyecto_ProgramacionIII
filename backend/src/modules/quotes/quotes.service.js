@@ -12,11 +12,17 @@ async function create(userId, { build, totalPrice, category, notes }) {
     totalPrice,
     category,
     notes: notes || '',
-    status: 'draft',
+    status: 'confirmed',
     createdAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
   };
   await ref.set(quote);
+  // Notificar a todos los vendedores para que puedan tomarla
+  sendToAllVendors({
+    title: '🖥️ Nueva cotización disponible',
+    body: `Cotización #${ref.id.slice(-6).toUpperCase()} — Q${Number(totalPrice || 0).toLocaleString()}`,
+    data: { quoteId: ref.id, type: 'new_quote_available' },
+  }).catch(err => console.error('[FCM] Error notificando vendedores:', err.message));
   return quote;
 }
 
@@ -65,7 +71,10 @@ async function assignVendor(quoteId, vendorId) {
   if (!doc.exists) return null;
   const quote = doc.data();
 
-  await ref.update({ vendorId, status: 'in_review', assignedAt: new Date().toISOString() });
+  const vendorDoc = await getDb().collection('users').doc(vendorId).get();
+  const vendorName = vendorDoc.exists ? (vendorDoc.data().displayName || 'Empleado') : 'Empleado';
+
+  await ref.update({ vendorId, vendorName, status: 'in_review', assignedAt: new Date().toISOString() });
 
   await sendToUser(quote.userId, {
     title: '📋 Cotización en revisión',
@@ -208,6 +217,12 @@ async function claimQuote(quoteId, vendorId) {
     tx.update(ref, { vendorId, status: 'in_review', claimedAt: new Date().toISOString() });
     claimedQuote = { id: quoteId, ...data, vendorId, status: 'in_review' };
   });
+
+  // Guardar nombre del vendedor (fuera de la transacción para no bloquearla)
+  const vendorDoc = await getDb().collection('users').doc(vendorId).get();
+  const vendorName = vendorDoc.exists ? (vendorDoc.data().displayName || 'Empleado') : 'Empleado';
+  await ref.update({ vendorName });
+  claimedQuote.vendorName = vendorName;
 
   // Notificar al cliente (fuera de la transacción)
   sendToUser(claimedQuote.userId, {

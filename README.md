@@ -762,6 +762,110 @@ cd mobile && npx expo start --tunnel
 
 ---
 
+## Actualización — 23 de Mayo 2026 (tarde)
+
+### Flujo libre de cotizaciones — cualquier vendedor puede tomarlas
+
+#### Problema resuelto
+
+Las cotizaciones que creaba el cliente quedaban en estado `draft` de forma permanente porque no existía botón "confirmar" en la app. El admin las veía (su vista muestra todos los estados), pero los vendedores nunca podían verlas porque solo tienen acceso a cotizaciones en estado `confirmed`.
+
+#### Cambios aplicados
+
+**Backend — `backend/src/modules/quotes/quotes.service.js`**
+
+| Función | Cambio |
+|---------|--------|
+| `create()` | Estado inicial cambiado de `draft` → `confirmed`. Llama a `sendToAllVendors()` inmediatamente para notificar a todos los empleados de ventas. |
+| `claimQuote()` | Después de la transacción atómica, busca el `displayName` del vendedor en Firestore y lo guarda como `vendorName` en el documento de la cotización. |
+| `assignVendor()` | Igual que `claimQuote`: guarda `vendorName` cuando el admin asigna manualmente. |
+
+**Flujo actualizado:**
+
+```
+Cliente crea cotización → confirmed (todos los vendedores la ven y reciben notificación)
+Cualquier vendedor toca "Tomar cotización" → in_review (solo él la gestiona desde ese momento)
+```
+
+> La asignación manual por parte del admin sigue funcionando como antes para casos donde el admin prefiere asignar directamente.
+
+**Mobile — nombre del empleado visible en todas las vistas**
+
+| Archivo | Cambio |
+|---------|--------|
+| `mobile/types/index.ts` | Campo `vendorName?: string` añadido al tipo `Quote` |
+| `mobile/app/admin/quotes.tsx` | Tag del empleado muestra el nombre completo (ej: `"Juan García"`) en lugar del ID recortado (`"VND-A4B2"`) |
+| `mobile/app/quote/[id].tsx` | Estado `in_review` en la vista del cliente muestra: `"Juan García está revisando tu cotización."` |
+
+---
+
+## Guía de inicio para compañeros del equipo
+
+> Requisito previo: tener Node.js 18+ y la app **Expo Go** instalada en el teléfono.
+
+### 1. Clonar y preparar
+
+```bash
+git clone https://github.com/matamoros90/Proyecto_ProgramacionIII.git
+cd Proyecto_ProgramacionIII
+```
+
+### 2. Backend
+
+```bash
+cd backend
+npm ci
+```
+
+Pedir al responsable del backend el archivo `.env` con las credenciales de Firebase (nunca se sube a git). Luego:
+
+```bash
+npm run dev          # Corre en http://0.0.0.0:3000
+```
+
+> Si cambias de red WiFi obtén tu nueva IP con `ipconfig getifaddr en0` y actualízala en `ALLOWED_ORIGINS` del `.env`.
+
+### 3. App móvil
+
+```bash
+cd mobile
+npm ci
+npx expo start       # Modo LAN — requiere estar en la misma red que el backend
+```
+
+Escanea el QR con Expo Go. La app detecta la IP del backend automáticamente cuando están en la misma red.
+
+### 4. Credenciales de prueba
+
+| Rol | Email | Contraseña |
+|-----|-------|------------|
+| Administrador | `admin@zonapc.gt` | `Admin1234` |
+| Vendedor demo | `vendedor@zonapc.gt` | `Vendedor2026` |
+| Cliente | Registrarse en la app | — |
+
+> Para crear empleados vendedor adicionales, usa la sección **Gestionar Empleados** del panel de administración.
+
+### 5. Poblar la base de datos (solo primera vez)
+
+```bash
+cd backend
+node seed-components.js   # 43 componentes de hardware
+node seed-admin.js        # Usuario administrador
+node seed-vendor.js       # Vendedor de prueba
+```
+
+### 6. Reglas de trabajo en equipo
+
+| Regla | Motivo |
+|-------|--------|
+| Crear tu propia rama (`git checkout -b feat/mi-feature`) antes de modificar | Evita conflictos en `main` |
+| Nunca commitear `.env` | Contiene la llave privada de Firebase |
+| Usar `npm ci` en lugar de `npm install` | Respeta el `package-lock.json` y evita instalar versiones comprometidas |
+| Reiniciar el backend tras cambios en archivos `.js` del backend | Node carga el código en memoria; sin reinicio los cambios no tienen efecto |
+| Al cambiar de red WiFi actualizar `ALLOWED_ORIGINS` en `backend/.env` | El CORS rechaza orígenes no listados en producción |
+
+---
+
 ## Documentación
 
 - [Arquitectura del Backend](backend/README.md)
