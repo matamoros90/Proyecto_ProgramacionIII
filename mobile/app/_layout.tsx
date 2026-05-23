@@ -47,9 +47,10 @@ export default function RootLayout() {
     return () => { cancelled = true; };
   }, [firebaseUser?.uid]);
 
-  // Registro de token FCM — require() lazy para que el módulo no se inicialice en Expo Go
+  // Registro de token FCM y navegación al tocar notificaciones
   useEffect(() => {
     if (!firebaseUser || IS_EXPO_GO) return;
+    let responseSub: { remove: () => void } | null = null;
     (async () => {
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -67,10 +68,22 @@ export default function RootLayout() {
         if (tokenData?.data) {
           await api.post('/auth/fcm-token', { token: String(tokenData.data) });
         }
+
+        // Al tocar una notificación → navega a la pantalla correspondiente
+        responseSub = N.addNotificationResponseReceivedListener((response) => {
+          const data = response.notification.request.content.data as Record<string, string> | null;
+          if (!data) return;
+          if (data.type === 'new_quote_available') {
+            router.push('/vendor/dashboard' as any);
+          } else if (data.quoteId) {
+            router.push(`/quote/${data.quoteId}` as any);
+          }
+        });
       } catch {
         // No-op: FCM registration es no-crítico
       }
     })();
+    return () => { responseSub?.remove(); };
   }, [firebaseUser?.uid]);
 
   // Redirección según estado de autenticación

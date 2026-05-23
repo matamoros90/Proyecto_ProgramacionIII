@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshCon
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import {
   getVendorQuotes, claimQuote, sendVendorFollowup, markQuoteReady, verifyQuotePayment,
   archiveVendorQuote, deleteVendorQuote,
@@ -12,6 +13,8 @@ import { Colors } from '../../constants/colors';
 import { Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { formatPrice, formatDate, CATEGORY_LABELS } from '../../utils/formatters';
 import { useAuth } from '../../hooks/useAuth';
+
+const IS_EXPO_GO = Constants.executionEnvironment === 'storeClient';
 
 const STATUS_COLOR: Record<QuoteStatus, string> = {
   draft:             Colors.textMuted,
@@ -71,6 +74,19 @@ export default function VendorDashboard() {
     }
     load();
   }, [isVendor, isAuthenticated, profileReady]);
+
+  // Escucha notificaciones en primer plano — refresca lista cuando llega nueva cotización
+  useEffect(() => {
+    if (IS_EXPO_GO || !isVendor) return;
+    const N = require('expo-notifications') as typeof import('expo-notifications');
+    const sub = N.addNotificationReceivedListener((notification) => {
+      const type = notification.request.content.data?.type as string | undefined;
+      if (type === 'new_quote_available') {
+        load();
+      }
+    });
+    return () => sub.remove();
+  }, [isVendor, load]);
 
   async function handleClaim(quoteId: string) {
     Alert.alert(
@@ -396,27 +412,16 @@ export default function VendorDashboard() {
                   )}
 
                   {(quote.status === 'ready' || quote.status === 'accepted') && (
-                    <View style={{ flex: 1, gap: 6 }}>
-                      <View style={styles.waitingBadge}>
-                        <Ionicons name="time-outline" size={16} color={Colors.info} />
-                        <Text style={styles.waitingText}>Esperando acción del cliente</Text>
-                      </View>
-                      <TouchableOpacity
-                        style={[styles.actionBtn, { borderColor: Colors.error }]}
-                        onPress={() => handleDelete(quote.id)}
-                        disabled={actionLoading === quote.id + '_delete'}
-                      >
-                        <Ionicons name="trash-outline" size={16} color={Colors.error} />
-                        <Text style={[styles.actionText, { color: Colors.error }]}>
-                          {actionLoading === quote.id + '_delete' ? 'Eliminando...' : 'Eliminar cotización'}
-                        </Text>
-                      </TouchableOpacity>
+                    <View style={styles.waitingBadge}>
+                      <Ionicons name="time-outline" size={16} color={Colors.info} />
+                      <Text style={styles.waitingText}>Esperando acción del cliente</Text>
                     </View>
                   )}
 
-                  {quote.status === 'in_review' && (
+                  {/* Eliminar disponible en todos los estados salvo pago enviado/verificado */}
+                  {!['payment_submitted', 'payment_verified'].includes(quote.status) && (
                     <TouchableOpacity
-                      style={[styles.actionBtn, { borderColor: Colors.error, marginTop: 2 }]}
+                      style={[styles.actionBtn, { borderColor: Colors.error }]}
                       onPress={() => handleDelete(quote.id)}
                       disabled={actionLoading === quote.id + '_delete'}
                     >
