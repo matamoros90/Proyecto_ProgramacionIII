@@ -40,6 +40,7 @@ function createApp() {
   app.use(helmet());
   app.use(cors({
     origin: (_origin, callback) => {
+      if (process.env.NODE_ENV !== 'production') return callback(null, true);
       if (!_origin || ALLOWED_ORIGINS.includes(_origin)) return callback(null, true);
       callback(new Error(`Origen no permitido por CORS: ${_origin}`));
     },

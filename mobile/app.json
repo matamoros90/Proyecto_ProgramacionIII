@@ -29,31 +29,22 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0A1223"
       },
-      "package": "com.zonapc.builder",
-      "googleServicesFile": "./google-services.json"
+      "package": "com.zonapc.builder"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.zonapc.builder",
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "bundleIdentifier": "com.zonapc.builder"
     },
     "web": {
       "bundler": "metro",
       "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
-    "extra": {
-      "router": {},
-"eas": {
-        "projectId": "9e756671-56ab-4cf9-9f90-0d7236d02c71"
-      }
-    },
-    "owner": "matamoros",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
     "updates": {
-      "url": "https://u.expo.dev/9e756671-56ab-4cf9-9f90-0d7236d02c71"
+      "enabled": false
+    },
+    "extra": {
+      "router": {}
     }
   }
 }
