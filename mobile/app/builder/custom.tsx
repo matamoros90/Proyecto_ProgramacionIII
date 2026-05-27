@@ -17,6 +17,28 @@ const COMPONENT_ORDER: ComponentType[] = [
   'cpu', 'motherboard', 'ram', 'gpu', 'storage', 'psu', 'case', 'cooling', 'peripheral',
 ];
 
+/** Minicomponente con fallback cuando la URL de imagen falla */
+function ComponentThumb({
+  uri, iconName, style,
+}: { uri?: string | null; iconName: string; style: any }) {
+  const [errored, setErrored] = useState(false);
+  if (uri && !errored) {
+    return (
+      <Image
+        source={{ uri }}
+        style={style}
+        resizeMode="contain"
+        onError={() => setErrored(true)}
+      />
+    );
+  }
+  return (
+    <View style={[style, { alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primaryGlow }]}>
+      <Ionicons name={iconName as any} size={22} color={Colors.primary} />
+    </View>
+  );
+}
+
 export default function CustomBuilderScreen() {
   const { build, compatibility, totalPrice, category, recommendation } = useBuilder();
   const [saving, setSaving] = useState(false);
@@ -112,14 +134,18 @@ export default function CustomBuilderScreen() {
               style={[styles.componentRow, component && styles.componentRowFilled]}
               onPress={() => router.push(`/builder/${type}` as any)}
             >
-              {component?.image ? (
-                <Image source={{ uri: component.image }} style={styles.componentThumb} resizeMode="contain" />
+              {component ? (
+                <ComponentThumb
+                  uri={component.image}
+                  iconName={(COMPONENT_ICONS[type] as any) || 'hardware-chip-outline'}
+                  style={styles.componentThumb}
+                />
               ) : (
-                <View style={[styles.componentIcon, { backgroundColor: component ? Colors.primaryGlow : Colors.surfaceElevated }]}>
+                <View style={[styles.componentIcon, { backgroundColor: Colors.surfaceElevated }]}>
                   <Ionicons
                     name={(COMPONENT_ICONS[type] as any) || 'hardware-chip-outline'}
                     size={22}
-                    color={component ? Colors.primary : Colors.textMuted}
+                    color={Colors.textMuted}
                   />
                 </View>
               )}

@@ -73,6 +73,28 @@ function getIncompatibleReason(
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Thumbnail con fallback automático cuando la URL falla */
+function ComponentThumb({
+  uri, style, dim,
+}: { uri?: string | null; style: any; dim?: boolean }) {
+  const [errored, setErrored] = useState(false);
+  if (uri && !errored) {
+    return (
+      <Image
+        source={{ uri }}
+        style={[style, dim && { opacity: 0.35 }]}
+        resizeMode="cover"
+        onError={() => setErrored(true)}
+      />
+    );
+  }
+  return (
+    <View style={[style, { alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.surfaceElevated }, dim && { opacity: 0.35 }]}>
+      <Ionicons name="hardware-chip-outline" size={28} color={Colors.textMuted} />
+    </View>
+  );
+}
+
 export default function ComponentSelectorScreen() {
   const { type } = useLocalSearchParams<{ type: string }>();
   const { replaceComponent, build } = useBuilder();
@@ -172,17 +194,11 @@ export default function ComponentSelectorScreen() {
       >
         {/* Imagen del componente */}
         <View style={styles.cardLeft}>
-          {item.image ? (
-            <Image
-              source={{ uri: item.image }}
-              style={[styles.componentImage, isIncompatible && styles.imageIncompatible]}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={[styles.componentImage, styles.imagePlaceholder, isIncompatible && styles.imageIncompatible]}>
-              <Ionicons name="hardware-chip-outline" size={28} color={Colors.textMuted} />
-            </View>
-          )}
+          <ComponentThumb
+            uri={item.image}
+            style={styles.componentImage}
+            dim={isIncompatible}
+          />
           {isIncompatible && (
             <View style={styles.lockOverlay}>
               <Ionicons name="lock-closed" size={16} color="#fff" />
