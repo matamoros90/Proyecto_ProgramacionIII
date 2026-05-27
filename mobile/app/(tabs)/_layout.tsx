@@ -33,10 +33,7 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="builder"
-        options={{
-          title: 'Armar PC',
-          tabBarIcon: ({ color, size }) => <TabIcon name="construct" color={color} size={size} />,
-        }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="quotes"

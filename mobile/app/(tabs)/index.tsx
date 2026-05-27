@@ -1,7 +1,7 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import {
   Animated, View, Text, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Image, LayoutAnimation, Platform, UIManager, Alert
+  ActivityIndicator, Image, LayoutAnimation, Platform, UIManager
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -9,7 +9,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
 import { Colors } from '../../constants/colors';
 import { Spacing, FontSize, BorderRadius } from '../../constants/theme';
-import { useCartStore } from '../../stores/cartStore';
 
 // Habilitar animaciones de diseño nativas en Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -156,11 +155,29 @@ export default function HomeScreen() {
   const { profile, profileReady, isAdmin, isVendor, isAuthenticated, user } = useAuth();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   
-  // Zustand Cart store
-  const { addToCart } = useCartStore();
-  
   // Valor animado para el scroll vertical
   const scrollY = useRef(new Animated.Value(0)).current;
+
+  // ── Alturas estimadas del header para calibrar animaciones ────────────────
+  // gradient header (~130) + sectionHeader Armar PC (~74) = 204 de inicio
+  // cada builder card mide ~242px (imagen 170 + info 56 + márgenes 16)
+  // sectionHeader Acciones Rápidas (~74) → header total ≈ 762px
+  const B_CARD_H   = 242;
+  const B_TOP      = 204;                          // donde empieza el 1er builder card
+  const HEADER_H   = B_TOP + B_CARD_H * 2 + 74;  // ≈ 762
+
+  // Animaciones para los builder cards del header
+  const builderAnims = useMemo(() => ({
+    budget: {
+      opacity:    scrollY.interpolate({ inputRange: [B_TOP, B_TOP + B_CARD_H * 0.7], outputRange: [1, 0.55], extrapolate: 'clamp' }),
+      translateY: scrollY.interpolate({ inputRange: [B_TOP, B_TOP + B_CARD_H],       outputRange: [0, -28],  extrapolate: 'clamp' }),
+    },
+    custom: {
+      opacity:    scrollY.interpolate({ inputRange: [B_TOP + B_CARD_H, B_TOP + B_CARD_H * 1.7], outputRange: [1, 0.55], extrapolate: 'clamp' }),
+      translateY: scrollY.interpolate({ inputRange: [B_TOP + B_CARD_H, B_TOP + B_CARD_H * 2],   outputRange: [0, -28],  extrapolate: 'clamp' }),
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), []);
 
   // Redirige al panel correcto cuando el perfil termina de cargar
   useEffect(() => {
@@ -190,31 +207,6 @@ export default function HomeScreen() {
     } else {
       setExpandedId(id);
     }
-  };
-
-  const handleAddToCart = (item: CategoryItem) => {
-    // Formatear el ensamble como un tipo Build para el cartStore
-    const build: any = {};
-    item.components.forEach(c => {
-      build[c.type] = {
-        name: c.name,
-        brand: c.brand,
-        model: c.model,
-        price: c.price,
-        specs: c.specs
-      };
-    });
-    
-    addToCart(item.id as any, item.label, build, item.totalPrice);
-    
-    Alert.alert(
-      '🛒 ¡Agregado a la cesta!',
-      `La Estación de Trabajo ${item.label} (Q${item.totalPrice.toLocaleString()}) se ha agregado a tu cesta de compras.`,
-      [
-        { text: 'Seguir viendo', style: 'cancel' },
-        { text: 'Ver Cesta', onPress: () => router.push('/learn' as any) } // learn es el tab de Cesta
-      ]
-    );
   };
 
   // Header de la FlatList
@@ -253,33 +245,85 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Hero Card */}
-        <TouchableOpacity
-          style={styles.heroCard}
-          onPress={() => router.push('/builder/budget')}
-          activeOpacity={0.85}
-        >
-          <LinearGradient
-            colors={[Colors.primary, Colors.secondary]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.heroGradient}
-          >
-            <View style={styles.heroContent}>
-              <Ionicons name="hardware-chip" size={40} color="#fff" />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.heroTitle}>Armar PC Inteligente</Text>
-                <Text style={styles.heroDesc}>
-                  Ingresa tu presupuesto y el sistema te recomienda los mejores componentes
-                </Text>
-              </View>
-              <Ionicons name="arrow-forward-circle" size={32} color="rgba(255,255,255,0.8)" />
-            </View>
-          </LinearGradient>
-        </TouchableOpacity>
-      </LinearGradient>
+        </LinearGradient>
 
-      {/* Título de la sección principal */}
+      {/* ── Sección Armar PC ─────────────────────────────── */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Armar PC</Text>
+        <Text style={styles.sectionSubtitle}>Elige cómo quieres construir tu computadora</Text>
+      </View>
+
+      {/* Tarjeta — PC por Presupuesto */}
+      <Animated.View style={[styles.cardContainer, { opacity: builderAnims.budget.opacity, transform: [{ translateY: builderAnims.budget.translateY }] }]}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => router.push('/builder/budget')}
+          activeOpacity={0.92}
+        >
+          <View style={styles.imageWrapper}>
+            <Image
+              source={{ uri: 'https://images.unsplash.com/photo-1555680202-c86f0e12f086?w=600' }}
+              style={styles.cardImage}
+              resizeMode="cover"
+            />
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.78)']}
+              style={styles.imageOverlay}
+            >
+              <View style={styles.categoryBadgeRow}>
+                <View style={[styles.badgeIcon, { backgroundColor: '#2563EB33', borderColor: '#2563EB' }]}>
+                  <Ionicons name="cash-outline" size={20} color="#60A5FA" />
+                </View>
+                <Text style={styles.categoryName}>PC por Presupuesto</Text>
+              </View>
+            </LinearGradient>
+          </View>
+          <View style={styles.cardInfo}>
+            <Text style={styles.cardTitle}>Ingresa tu presupuesto</Text>
+            <View style={styles.priceRow}>
+              <Text style={[styles.priceText, { color: Colors.primary }]}>Recomendado</Text>
+              <Ionicons name="chevron-forward" size={18} color={Colors.primary} />
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* Tarjeta — Armado Personalizado */}
+      <Animated.View style={[styles.cardContainer, { opacity: builderAnims.custom.opacity, transform: [{ translateY: builderAnims.custom.translateY }] }]}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => router.push('/builder/custom')}
+          activeOpacity={0.92}
+        >
+          <View style={styles.imageWrapper}>
+            <Image
+              source={{ uri: 'https://images.unsplash.com/photo-1591488320449-011701bb6704?w=600' }}
+              style={styles.cardImage}
+              resizeMode="cover"
+            />
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.78)']}
+              style={styles.imageOverlay}
+            >
+              <View style={styles.categoryBadgeRow}>
+                <View style={[styles.badgeIcon, { backgroundColor: '#6D28D933', borderColor: '#6D28D9' }]}>
+                  <Ionicons name="settings-outline" size={20} color="#A78BFA" />
+                </View>
+                <Text style={styles.categoryName}>Armado Personalizado</Text>
+              </View>
+            </LinearGradient>
+          </View>
+          <View style={styles.cardInfo}>
+            <Text style={styles.cardTitle}>Selecciona cada componente</Text>
+            <View style={styles.priceRow}>
+              <Text style={[styles.priceText, { color: Colors.secondary }]}>Compatibilidad en tiempo real</Text>
+              <Ionicons name="chevron-forward" size={18} color={Colors.secondary} />
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* ── Acciones Rápidas ─────────────────────────────── */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
         <Text style={styles.sectionSubtitle}>Selecciona un perfil de uso para tu PC</Text>
@@ -305,42 +349,26 @@ export default function HomeScreen() {
   // Renderizado de las tarjetas animadas
   const renderCategoryItem = ({ item, index }: { item: CategoryItem; index: number }) => {
     const isExpanded = expandedId === item.id;
-    const CARD_HEIGHT = 280; // Altura base aproximada de la tarjeta cerrada
+    const CARD_HEIGHT = 280;
 
-    // Configuración limpia de rangos para evitar colisión/superposición de recuadros al subir
-    const inputRange = [
-      -1,
-      0,
-      CARD_HEIGHT * index,
-      CARD_HEIGHT * (index + 1)
-    ];
+    // Posición real del card en el scroll view:
+    // El header mide ~HEADER_H px antes del primer item.
+    // El card empieza a salirse por arriba cuando scrollY ≈ cardTopY.
+    const cardTopY = HEADER_H + CARD_HEIGHT * index;
 
-    const opacityInputRange = [
-      -1,
-      0,
-      CARD_HEIGHT * index,
-      CARD_HEIGHT * (index + 0.8)
-    ];
-
-    // Animación de desvanecimiento (Fade Out) al subir
+    // Fade suave: empieza cuando el card llega al tope de pantalla,
+    // termina al 65% de su altura (siempre queda legible, mín 0.55)
     const opacity = scrollY.interpolate({
-      inputRange: opacityInputRange,
-      outputRange: [1, 1, 1, 0],
-      extrapolate: 'clamp'
+      inputRange: [cardTopY - 10, cardTopY + CARD_HEIGHT * 0.65],
+      outputRange: [1, 0.55],
+      extrapolate: 'clamp',
     });
 
-    // Animación de deslizamiento vertical limpia (sin superposiciones incómodas)
+    // Deslizamiento hacia arriba mientras sale de pantalla
     const translateY = scrollY.interpolate({
-      inputRange,
-      outputRange: [0, 0, 0, -40],
-      extrapolate: 'clamp'
-    });
-
-    // Mantener la escala completa (1) para usar siempre el 100% de los márgenes laterales durante la transición
-    const scale = scrollY.interpolate({
-      inputRange,
-      outputRange: [1, 1, 1, 1],
-      extrapolate: 'clamp'
+      inputRange: [cardTopY - 10, cardTopY + CARD_HEIGHT],
+      outputRange: [0, -35],
+      extrapolate: 'clamp',
     });
 
     return (
@@ -349,7 +377,7 @@ export default function HomeScreen() {
           styles.cardContainer,
           {
             opacity,
-            transform: [{ translateY }, { scale }],
+            transform: [{ translateY }],
           }
         ]}
       >

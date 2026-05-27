@@ -32,6 +32,36 @@ async function generateBuild(budget, category) {
     }
   }
 
+  // Paso 1.5: Rellenar slots vacíos con presupuesto sobrante
+  // (cuando el peso asignado es menor que el precio del componente más barato disponible)
+  {
+    const spentBudget = Object.values(build).reduce((sum, c) => sum + (c?.price || 0), 0);
+    let slack = budget - spentBudget;
+
+    // Esenciales primero, opcionales al final
+    const ESSENTIAL_ORDER = ['cpu', 'motherboard', 'ram', 'psu', 'storage', 'case'];
+    const OPTIONAL_ORDER  = ['gpu', 'cooling', 'peripheral'];
+
+    const emptyTypes = [
+      ...ESSENTIAL_ORDER.filter(t => weights[t] !== undefined && !build[t]),
+      ...OPTIONAL_ORDER.filter(t => weights[t] !== undefined && weights[t] > 0 && !build[t]),
+    ];
+
+    for (const type of emptyTypes) {
+      if (slack <= 0) break;
+      const allAvailable = await getByTypeAndBudget(type, 999999);
+      if (allAvailable.length === 0) continue;
+      const cheapest = [...allAvailable].sort((a, b) => a.price - b.price)[0];
+      if (cheapest.price <= slack) {
+        build[type] = cheapest;
+        alternatives[type] = allAvailable
+          .filter(c => c.id !== cheapest.id)
+          .slice(0, 3);
+        slack -= cheapest.price;
+      }
+    }
+  }
+
   // Paso 2: validar compatibilidad y reparar socket si hay conflicto
   const validation = validateBuild(build);
   const repairLog = [];
