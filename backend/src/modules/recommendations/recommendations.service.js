@@ -1,5 +1,5 @@
 const { getByTypeAndBudget } = require('../components/components.service');
-const { validateBuild } = require('../compatibility/compatibility.service');
+const { validateBuild, CASE_COMPAT } = require('../compatibility/compatibility.service');
 const {
   COMPONENT_TYPES,
   CATEGORY_PRIORITIES,
@@ -32,13 +32,12 @@ async function generateBuild(budget, category) {
     }
   }
 
-  // Paso 1.5: Rellenar slots vacíos con presupuesto sobrante
-  // (cuando el peso asignado es menor que el precio del componente más barato disponible)
+  // Paso 1.5: Rellenar slots vacíos con el componente más barato COMPATIBLE
+  // con lo que ya hay en el build (respeta socket, ramType, caseType, etc.)
   {
     const spentBudget = Object.values(build).reduce((sum, c) => sum + (c?.price || 0), 0);
     let slack = budget - spentBudget;
 
-    // Esenciales primero, opcionales al final
     const ESSENTIAL_ORDER = ['cpu', 'motherboard', 'ram', 'psu', 'storage', 'case'];
     const OPTIONAL_ORDER  = ['gpu', 'cooling', 'peripheral'];
 
@@ -51,45 +50,122 @@ async function generateBuild(budget, category) {
       if (slack <= 0) break;
       const allAvailable = await getByTypeAndBudget(type, 999999);
       if (allAvailable.length === 0) continue;
-      const cheapest = [...allAvailable].sort((a, b) => a.price - b.price)[0];
-      if (cheapest.price <= slack) {
-        build[type] = cheapest;
-        alternatives[type] = allAvailable
-          .filter(c => c.id !== cheapest.id)
+
+      // Ordenar de más barato a más caro
+      const sorted = [...allAvailable].sort((a, b) => a.price - b.price);
+
+      // Elegir el primero que quepa en el presupuesto Y no introduzca nuevos errores
+      const currentErrorCount = validateBuild(build).errors.length;
+      let chosen = null;
+      for (const candidate of sorted) {
+        if (candidate.price > slack) continue;
+        const testValidation = validateBuild({ ...build, [type]: candidate });
+        if (testValidation.errors.length <= currentErrorCount) {
+          chosen = candidate;
+          break;
+        }
+      }
+
+      if (chosen) {
+        build[type] = chosen;
+        alternatives[type] = sorted
+          .filter(c => c.id !== chosen.id)
           .slice(0, 3);
-        slack -= cheapest.price;
+        slack -= chosen.price;
       }
     }
   }
 
-  // Paso 2: validar compatibilidad y reparar socket si hay conflicto
-  const validation = validateBuild(build);
+  // Paso 2: Reparar compatibilidad de forma iterativa (hasta 4 rondas)
+  // Cada ronda detecta errores frescos del build actual y los corrige;
+  // así un arreglo de socket que cambia el formFactor de la placa
+  // desencadena automáticamente la corrección del gabinete en la siguiente ronda.
   const repairLog = [];
+  const MAX_REPAIR_ROUNDS = 4;
 
-  if (!validation.compatible) {
-    for (const error of validation.errors) {
+  for (let round = 0; round < MAX_REPAIR_ROUNDS; round++) {
+    const check = validateBuild(build);
+    if (check.compatible) break;
+
+    let madeRepair = false;
+
+    for (const error of check.errors) {
+
+      // ── Socket CPU ↔ Motherboard ──────────────────────────────────────────
       if (error.component === 'cpu-motherboard' && build.cpu && build.motherboard) {
-        const fixedBoards = await getByTypeAndBudget(
-          COMPONENT_TYPES.MOTHERBOARD,
-          Math.floor(budget * weights.motherboard)
-        );
-        const compatible = fixedBoards.find(b => b.socket === build.cpu.socket);
-        if (compatible) {
-          build.motherboard = compatible;
-          repairLog.push(`Placa madre ajustada automáticamente a socket ${build.cpu.socket}`);
+        const allBoards = await getByTypeAndBudget(COMPONENT_TYPES.MOTHERBOARD, budget);
+        // Primero: placa con socket correcto Y formFactor compatible con el gabinete actual
+        const currentCaseType = build.case?.caseType;
+        const caseSupported = currentCaseType ? (CASE_COMPAT[currentCaseType] || []) : null;
+        let newBoard = caseSupported
+          ? allBoards.find(b => b.socket === build.cpu.socket && caseSupported.includes(b.formFactor))
+          : null;
+        // Fallback: solo socket correcto (gabinete se arreglará en ronda siguiente)
+        if (!newBoard) newBoard = allBoards.find(b => b.socket === build.cpu.socket);
+        if (newBoard) {
+          build.motherboard = newBoard;
+          repairLog.push(`Placa madre ajustada a socket ${build.cpu.socket}`);
+          madeRepair = true;
+        } else {
+          // Última opción: cambiar CPU al socket de la placa
+          const allCpus = await getByTypeAndBudget(COMPONENT_TYPES.CPU, budget);
+          const newCpu = allCpus.find(c => c.socket === build.motherboard.socket);
+          if (newCpu) {
+            build.cpu = newCpu;
+            repairLog.push(`Procesador ajustado a socket ${build.motherboard.socket}`);
+            madeRepair = true;
+          }
         }
+        break; // Re-validar desde el principio después de este cambio
       }
 
-      if (error.component === 'psu' && build.psu) {
-        const totalWatts = validation.summary.recommendedPsu;
-        const betterPsu = await getByTypeAndBudget(COMPONENT_TYPES.PSU, budget * 0.15);
-        const suitable = betterPsu.find(p => p.wattage >= totalWatts);
-        if (suitable) {
-          build.psu = suitable;
-          repairLog.push(`Fuente de poder ajustada a ${suitable.wattage}W para mayor estabilidad`);
+      // ── RAM ↔ Motherboard (tipo DDR) ────────────────────────────────────────
+      if (error.component === 'ram-motherboard' && build.ram && build.motherboard) {
+        const correctType = build.motherboard.ramType;
+        const allRam = await getByTypeAndBudget(COMPONENT_TYPES.RAM, budget);
+        const newRam = [...allRam]
+          .sort((a, b) => a.price - b.price)
+          .find(r => r.ramType === correctType);
+        if (newRam) {
+          build.ram = newRam;
+          repairLog.push(`RAM ajustada a ${correctType} compatible con la placa`);
+          madeRepair = true;
         }
+        break;
+      }
+
+      // ── Case ↔ Motherboard (factor de forma) ───────────────────────────────
+      if (error.component === 'case-motherboard' && build.case && build.motherboard) {
+        const boardFF = build.motherboard.formFactor;
+        const allCases = await getByTypeAndBudget(COMPONENT_TYPES.CASE, budget);
+        const newCase = [...allCases]
+          .sort((a, b) => a.price - b.price)
+          .find(c => (CASE_COMPAT[c.caseType] || []).includes(boardFF));
+        if (newCase) {
+          build.case = newCase;
+          repairLog.push(`Gabinete ajustado a ${newCase.name} (soporta placas ${boardFF})`);
+          madeRepair = true;
+        }
+        break;
+      }
+
+      // ── PSU insuficiente ────────────────────────────────────────────────────
+      if (error.component === 'psu' && build.psu) {
+        const needed = check.summary.recommendedPsu;
+        const allPsu = await getByTypeAndBudget(COMPONENT_TYPES.PSU, budget);
+        const newPsu = [...allPsu]
+          .sort((a, b) => a.price - b.price)
+          .find(p => p.wattage >= needed);
+        if (newPsu) {
+          build.psu = newPsu;
+          repairLog.push(`Fuente de poder ajustada a ${newPsu.wattage}W`);
+          madeRepair = true;
+        }
+        break;
       }
     }
+
+    if (!madeRepair) break; // Sin progreso posible, salir
   }
 
   const finalValidation = validateBuild(build);

@@ -82,7 +82,7 @@ export default function CustomBuilderScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#DBEAFE', '#EFF6FF']} style={styles.header}>
+      <LinearGradient colors={['#060B14', '#0D1528']} style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
@@ -101,20 +101,42 @@ export default function CustomBuilderScreen() {
 
         {/* Alertas de compatibilidad */}
         {hasErrors && (
-          <View style={[styles.alertBar, { backgroundColor: `${Colors.error}22`, borderColor: Colors.error }]}>
+          <TouchableOpacity
+            style={[styles.alertBar, { backgroundColor: `${Colors.error}22`, borderColor: Colors.error }]}
+            onPress={() =>
+              Alert.alert(
+                '⚠️ Errores de compatibilidad',
+                compatibility!.errors.map(e => `• ${e.message}`).join('\n\n'),
+                [{ text: 'Entendido', style: 'default' }]
+              )
+            }
+            activeOpacity={0.75}
+          >
             <Ionicons name="alert-circle" size={16} color={Colors.error} />
-            <Text style={[styles.alertText, { color: Colors.error }]}>
-              {compatibility!.errors.length} error(es) de compatibilidad
+            <Text style={[styles.alertText, { color: Colors.error, flex: 1 }]}>
+              {compatibility!.errors.length} error(es) — toca para ver detalles
             </Text>
-          </View>
+            <Ionicons name="chevron-forward" size={14} color={Colors.error} />
+          </TouchableOpacity>
         )}
         {!hasErrors && hasWarnings && (
-          <View style={[styles.alertBar, { backgroundColor: `${Colors.warning}22`, borderColor: Colors.warning }]}>
+          <TouchableOpacity
+            style={[styles.alertBar, { backgroundColor: `${Colors.warning}22`, borderColor: Colors.warning }]}
+            onPress={() =>
+              Alert.alert(
+                '⚠️ Advertencias',
+                compatibility!.warnings.map(w => `• ${w.message}`).join('\n\n'),
+                [{ text: 'Entendido', style: 'default' }]
+              )
+            }
+            activeOpacity={0.75}
+          >
             <Ionicons name="warning" size={16} color={Colors.warning} />
-            <Text style={[styles.alertText, { color: Colors.warning }]}>
-              {compatibility!.warnings.length} advertencia(s)
+            <Text style={[styles.alertText, { color: Colors.warning, flex: 1 }]}>
+              {compatibility!.warnings.length} advertencia(s) — toca para ver detalles
             </Text>
-          </View>
+            <Ionicons name="chevron-forward" size={14} color={Colors.warning} />
+          </TouchableOpacity>
         )}
         {!hasErrors && !hasWarnings && Object.keys(build).length > 0 && (
           <View style={[styles.alertBar, { backgroundColor: `${Colors.success}22`, borderColor: Colors.success }]}>

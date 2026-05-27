@@ -127,7 +127,7 @@ export default function AdminDashboard() {
       >
         {/* Cabecera del Panel */}
         <Animated.View style={{ opacity: headerOpacity }}>
-          <LinearGradient colors={['#DBEAFE', '#EFF6FF']} style={styles.header}>
+          <LinearGradient colors={['#060B14', '#0D1528']} style={styles.header}>
             <Text style={styles.title}>Panel Administrativo</Text>
             <Text style={styles.subtitle}>ZonaPc Builder — Control total</Text>
           </LinearGradient>

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Image,
   Alert, FlatList, Dimensions, StatusBar
@@ -12,8 +12,43 @@ import { Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { useCartStore } from '../../stores/cartStore';
 import { useBuilder } from '../../hooks/useBuilder';
 import { useBuilderStore } from '../../stores/builderStore';
+import { getComponents } from '../../services/components.service';
 
 const { width } = Dimensions.get('window');
+
+// ── Imágenes reales por tipo de componente (Unsplash) ────────────────────────
+const COMP_IMGS: Record<string, string> = {
+  cpu:         'https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=120&q=80',
+  gpu:         'https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=120&q=80',
+  motherboard: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=120&q=80',
+  ram:         'https://images.unsplash.com/photo-1562976540-1502c2145186?w=120&q=80',
+  storage:     'https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=120&q=80',
+  case:        'https://images.unsplash.com/photo-1547082299-de196ea013d6?w=120&q=80',
+  cooling:     'https://images.unsplash.com/photo-1600348712270-b1ca97791f19?w=120&q=80',
+  psu:         'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=120&q=80',
+};
+
+// ── Minicomponente: imagen con fallback al ícono ──────────────────────────────
+function ComponentImage({
+  uri, fallbackIcon, color,
+}: { uri?: string | null; fallbackIcon: string; color: string }) {
+  const [errored, setErrored] = useState(false);
+  if (uri && !errored) {
+    return (
+      <Image
+        source={{ uri }}
+        style={styles.compImage}
+        resizeMode="contain"
+        onError={() => setErrored(true)}
+      />
+    );
+  }
+  return (
+    <View style={[styles.iconWrapper, { backgroundColor: `${color}18` }]}>
+      <Ionicons name={fallbackIcon as any} size={22} color={color} />
+    </View>
+  );
+}
 
 // Mapeo de traducciones estéticas de slots de hardware
 const COMPONENT_LABELS: Record<string, string> = {
@@ -84,6 +119,45 @@ export default function PresetBuilderScreen() {
       }
     }
   }, [category, item]);
+
+  // Enriquecer el preset con imágenes reales del backend (por tipo de componente)
+  useEffect(() => {
+    if (!item) return;
+    let cancelled = false;
+
+    async function enrichImages() {
+      const tasks = item!.components.map(async (comp) => {
+        try {
+          const list = await getComponents({ type: comp.type });
+          if (cancelled) return;
+
+          // Buscar por modelo exacto primero, luego por nombre parcial
+          const target = comp.model.toLowerCase();
+          const match =
+            list.find(rc => (rc.model ?? '').toLowerCase() === target) ??
+            list.find(rc =>
+              rc.name.toLowerCase().includes(target) ||
+              target.includes(rc.name.toLowerCase())
+            );
+
+          if (match?.image) {
+            const current = useBuilderStore.getState().build[comp.type];
+            if (current && !cancelled) {
+              useBuilderStore.getState().setComponent(comp.type, {
+                ...current,
+                image: match.image,
+              });
+            }
+          }
+        } catch { /* silencioso: mantiene imagen de fallback */ }
+      });
+
+      await Promise.all(tasks);
+    }
+
+    enrichImages();
+    return () => { cancelled = true; };
+  }, [item?.id]);
 
   if (!item) {
     return (
@@ -210,10 +284,12 @@ export default function PresetBuilderScreen() {
         activeOpacity={0.85}
         onPress={() => router.push({ pathname: '/builder/[type]', params: { type: compSlot.type } })}
       >
-        {/* Icono de hardware estilizado */}
-        <View style={[styles.iconWrapper, { backgroundColor: `${categoryColor}10` }]}>
-          <Ionicons name={compSlot.icon as any} size={20} color={categoryColor} />
-        </View>
+        {/* Imagen real del componente con fallback al ícono */}
+        <ComponentImage
+          uri={activeComp.image || COMP_IMGS[compSlot.type]}
+          fallbackIcon={compSlot.icon}
+          color={categoryColor}
+        />
 
         {/* Información del componente */}
         <View style={styles.cardDetails}>
@@ -441,10 +517,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 3,
   },
+  compImage: {
+    width: 52,
+    height: 52,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.surfaceElevated,
+    alignSelf: 'center',
+  },
   iconWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 52,
+    height: 52,
+    borderRadius: BorderRadius.sm,
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
