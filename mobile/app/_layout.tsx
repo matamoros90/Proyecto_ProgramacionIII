@@ -14,7 +14,6 @@ import api from '../services/api';
 const IS_EXPO_GO = Constants.executionEnvironment === 'storeClient';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
-SplashScreen.hideAsync().catch(() => {});
 
 export default function RootLayout() {
   const {
@@ -33,6 +32,16 @@ export default function RootLayout() {
     });
     return unsubscribe;
   }, []);
+
+  // Esconder el Splash Screen de forma segura cuando la autenticación esté inicializada
+  useEffect(() => {
+    if (isInitialized) {
+      const timer = setTimeout(() => {
+        SplashScreen.hideAsync().catch(() => {});
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isInitialized]);
 
   // Carga del perfil centralizada aquí (UNA sola llamada por sesión)
   useEffect(() => {
@@ -111,6 +120,7 @@ export default function RootLayout() {
         <Stack.Screen name="admin/orders" />
         <Stack.Screen name="builder/budget" />
         <Stack.Screen name="builder/custom" />
+        <Stack.Screen name="builder/preset" />
         <Stack.Screen name="builder/[type]" />
         <Stack.Screen name="order/[id]" />
         <Stack.Screen name="quote/[id]" />

@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
+import {
+  View, Text, StyleSheet, TouchableOpacity, Alert, Image,
+  Animated, ActivityIndicator, StatusBar, Platform, UIManager
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +11,11 @@ import { Colors } from '../../constants/colors';
 import { Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { formatPrice, ORDER_STATE_LABELS } from '../../utils/formatters';
 import { useAuth } from '../../hooks/useAuth';
+
+// Habilitar animaciones nativas de diseño en Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 interface DashboardData {
   orders: { total: number; byState: Record<string, number> };
@@ -26,8 +34,31 @@ const STATE_COLORS: Record<string, string> = {
   cancelled: Colors.error,
 };
 
+// Enlaces de imágenes temáticas premium para métricas
+const METRIC_IMAGES = {
+  orders: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=400',       // Cajas, logística, almacén
+  revenue: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400',      // Gráficos de ganancias, laptop
+  quotes: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400',       // Planificación, blueprints, lápiz y hojas
+  assembling: 'https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=400',   // Chip, placa base, soldadura de microcontrolador
+};
+
+// Enlaces de imágenes temáticas premium para banners de gestión
+const NAV_IMAGES = {
+  personal: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600',     // Gestión de personal / equipo de trabajo
+  inventory: 'https://images.unsplash.com/photo-1553413077-190dd305871c?w=600',    // Inventario, estantería de productos
+  quotes: 'https://images.unsplash.com/photo-1507925921958-8a62f3d1a50d?w=600',       // Tablero de cotizaciones, notas ágiles
+  orders: 'https://images.unsplash.com/photo-1512756290469-ec0602047974?w=600',       // Ensamblaje en estación de trabajo hardware
+  deliveries: 'https://images.unsplash.com/photo-1549194388-f61be84a6e9e?w=600',   // Vehículo en tránsito / entrega de paquetes
+};
+
 export default function AdminDashboard() {
   const { isAdmin, isAuthenticated, profileReady, signOut } = useAuth();
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Valor animado para la posición del scroll
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   function handleSignOut() {
     Alert.alert('Cerrar sesión', '¿Estás seguro que deseas salir?', [
@@ -35,12 +66,8 @@ export default function AdminDashboard() {
       { text: 'Cerrar sesión', style: 'destructive', onPress: signOut },
     ]);
   }
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Esperar a que el perfil esté cargado y el usuario autenticado
     if (!profileReady || !isAuthenticated) return;
     if (!isAdmin) {
       Alert.alert('Sin acceso', 'No tienes permisos de administrador');
@@ -71,140 +98,407 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <Ionicons name="settings-outline" size={48} color={Colors.textMuted} />
-        <Text style={styles.loadingText}>Cargando panel admin...</Text>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.loadingText}>Cargando panel administrativo...</Text>
       </View>
     );
   }
 
+  // Animación del header
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [1, 0.95],
+    extrapolate: 'clamp',
+  });
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <LinearGradient colors={['#DBEAFE', '#EFF6FF']} style={styles.header}>
-        <Text style={styles.title}>Panel Administrativo</Text>
-        <Text style={styles.subtitle}>ZonaPc Builder — Control total</Text>
-      </LinearGradient>
-
-      <View style={styles.body}>
-        {/* Métricas */}
-        {data && (
-          <View style={styles.metricsGrid}>
-            <View style={[styles.metricCard, { borderColor: Colors.primary }]}>
-              <Ionicons name="cube" size={24} color={Colors.primary} />
-              <Text style={styles.metricValue}>{data.orders.total}</Text>
-              <Text style={styles.metricLabel}>Órdenes Totales</Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.metricCard, { borderColor: Colors.accent }]}
-              onPress={() => router.push('/admin/revenue' as any)}
-            >
-              <Ionicons name="cash" size={24} color={Colors.accent} />
-              <Text style={styles.metricValue}>{formatPrice(data.revenue.total)}</Text>
-              <Text style={styles.metricLabel}>Ingresos</Text>
-              <Ionicons name="chevron-forward" size={12} color={Colors.textMuted} style={{ alignSelf: 'flex-end' }} />
-            </TouchableOpacity>
-            <View style={[styles.metricCard, { borderColor: Colors.secondary }]}>
-              <Ionicons name="document-text" size={24} color={Colors.secondary} />
-              <Text style={styles.metricValue}>{data.quotes.total}</Text>
-              <Text style={styles.metricLabel}>Cotizaciones</Text>
-            </View>
-            <View style={[styles.metricCard, { borderColor: Colors.warning }]}>
-              <Ionicons name="time" size={24} color={Colors.warning} />
-              <Text style={styles.metricValue}>{data.orders.byState?.assembling ?? 0}</Text>
-              <Text style={styles.metricLabel}>En Ensamblaje</Text>
-            </View>
-          </View>
+    <View style={styles.mainContainer}>
+      <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
+      
+      <Animated.ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
         )}
+        scrollEventThrottle={16}
+      >
+        {/* Cabecera del Panel */}
+        <Animated.View style={{ opacity: headerOpacity }}>
+          <LinearGradient colors={['#DBEAFE', '#EFF6FF']} style={styles.header}>
+            <Text style={styles.title}>Panel Administrativo</Text>
+            <Text style={styles.subtitle}>ZonaPc Builder — Control total</Text>
+          </LinearGradient>
+        </Animated.View>
 
-        {/* Órdenes recientes */}
-        <Text style={styles.sectionTitle}>Órdenes Recientes</Text>
-        {orders.map((order) => {
-          const color = STATE_COLORS[order.state] ?? Colors.textMuted;
-          const NEXT_STATES: Record<string, string> = {
-            pending: 'components_ready',
-            components_ready: 'assembling',
-            assembling: 'software_install',
-            software_install: 'testing',
-            testing: 'ready',
-            ready: 'delivered',
-          };
-          const nextState = NEXT_STATES[order.state];
-
-          return (
-            <View key={order.id} style={styles.orderCard}>
-              <View style={styles.orderHeader}>
-                <View>
-                  <Text style={styles.orderId}>#{order.id.slice(-6).toUpperCase()}</Text>
-                  <Text style={[styles.orderState, { color }]}>
-                    {ORDER_STATE_LABELS[order.state]}
-                  </Text>
+        <View style={styles.body}>
+          {/* Métricas con diseño de imágenes de fondo y bordes brillantes */}
+          {data && (
+            <View style={styles.metricsGrid}>
+              
+              {/* Card 1: Órdenes Totales */}
+              <View style={[styles.metricCard, { borderColor: `${Colors.primary}aa` }]}>
+                <Image source={{ uri: METRIC_IMAGES.orders }} style={styles.cardBg} />
+                <LinearGradient colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.85)']} style={styles.cardGradient} />
+                <View style={styles.metricContent}>
+                  <View style={[styles.metricIconBox, { backgroundColor: `${Colors.primary}25` }]}>
+                    <Ionicons name="cube" size={20} color={Colors.primary} />
+                  </View>
+                  <Text style={styles.metricValue}>{data.orders.total}</Text>
+                  <Text style={styles.metricLabel}>Órdenes Totales</Text>
                 </View>
-                <Text style={styles.orderPrice}>{formatPrice(order.totalPrice)}</Text>
               </View>
 
-              {nextState && (
-                <TouchableOpacity
-                  style={[styles.advanceBtn, { borderColor: color }]}
-                  onPress={() => updateState(order.id, nextState)}
-                >
-                  <Ionicons name="arrow-forward-circle" size={16} color={color} />
-                  <Text style={[styles.advanceBtnText, { color }]}>
-                    Avanzar a: {ORDER_STATE_LABELS[nextState]}
-                  </Text>
-                </TouchableOpacity>
-              )}
+              {/* Card 2: Ingresos */}
+              <TouchableOpacity
+                style={[styles.metricCard, { borderColor: `${Colors.accent}aa` }]}
+                onPress={() => router.push('/admin/revenue' as any)}
+                activeOpacity={0.9}
+              >
+                <Image source={{ uri: METRIC_IMAGES.revenue }} style={styles.cardBg} />
+                <LinearGradient colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.85)']} style={styles.cardGradient} />
+                <View style={styles.metricContent}>
+                  <View style={[styles.metricIconBox, { backgroundColor: `${Colors.accent}25` }]}>
+                    <Ionicons name="cash" size={20} color={Colors.accent} />
+                  </View>
+                  <Text style={styles.metricValue}>{formatPrice(data.revenue.total)}</Text>
+                  <Text style={styles.metricLabel}>Ingresos</Text>
+                  <Ionicons name="chevron-forward-circle" size={14} color={Colors.accent} style={styles.cardChevron} />
+                </View>
+              </TouchableOpacity>
+
+              {/* Card 3: Cotizaciones */}
+              <View style={[styles.metricCard, { borderColor: `${Colors.secondary}aa` }]}>
+                <Image source={{ uri: METRIC_IMAGES.quotes }} style={styles.cardBg} />
+                <LinearGradient colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.85)']} style={styles.cardGradient} />
+                <View style={styles.metricContent}>
+                  <View style={[styles.metricIconBox, { backgroundColor: `${Colors.secondary}25` }]}>
+                    <Ionicons name="document-text" size={20} color={Colors.secondary} />
+                  </View>
+                  <Text style={styles.metricValue}>{data.quotes.total}</Text>
+                  <Text style={styles.metricLabel}>Cotizaciones</Text>
+                </View>
+              </View>
+
+              {/* Card 4: En Ensamblaje */}
+              <View style={[styles.metricCard, { borderColor: `${Colors.warning}aa` }]}>
+                <Image source={{ uri: METRIC_IMAGES.assembling }} style={styles.cardBg} />
+                <LinearGradient colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.85)']} style={styles.cardGradient} />
+                <View style={styles.metricContent}>
+                  <View style={[styles.metricIconBox, { backgroundColor: `${Colors.warning}25` }]}>
+                    <Ionicons name="hardware-chip-outline" size={20} color={Colors.warning} />
+                  </View>
+                  <Text style={styles.metricValue}>{data.orders.byState?.assembling ?? 0}</Text>
+                  <Text style={styles.metricLabel}>En Ensamblaje</Text>
+                </View>
+              </View>
+
             </View>
-          );
-        })}
+          )}
 
-        {/* Navegación admin */}
-        <Text style={styles.sectionTitle}>Gestión</Text>
-        {[
-          { label: 'Gestionar Empleados', icon: 'people-outline', route: '/admin/vendors' },
-          { label: 'Gestionar Inventario', icon: 'cube-outline', route: '/admin/inventory' },
-          { label: 'Ver Cotizaciones', icon: 'document-text-outline', route: '/admin/quotes' },
-          { label: 'Gestionar Órdenes', icon: 'list-outline', route: '/admin/orders' },
-          { label: 'Entregas', icon: 'car-outline', route: '/admin/deliveries' },
-        ].map((item) => (
-          <TouchableOpacity
-            key={item.label}
-            style={styles.navCard}
-            onPress={() => router.push(item.route as any)}
-          >
-            <Ionicons name={item.icon as any} size={20} color={Colors.primary} />
-            <Text style={styles.navLabel}>{item.label}</Text>
-            <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+          {/* Sección de Gestión con Banners de Imágenes Parallax-Look */}
+          <View style={styles.dividerRow}>
+            <Text style={styles.sectionTitle}>Gestión de Operaciones</Text>
+            <View style={styles.subLine} />
+          </View>
+
+          {[
+            { label: 'Gestión de Personal', icon: 'people-outline', route: '/admin/vendors', image: NAV_IMAGES.personal, color: Colors.primary },
+            { label: 'Gestionar Inventario', icon: 'cube-outline', route: '/admin/inventory', image: NAV_IMAGES.inventory, color: Colors.accent },
+            { label: 'Ver Cotizaciones', icon: 'document-text-outline', route: '/admin/quotes', image: NAV_IMAGES.quotes, color: Colors.secondary },
+            { label: 'Gestionar Órdenes', icon: 'list-outline', route: '/admin/orders', image: NAV_IMAGES.orders, color: Colors.warning },
+            { label: 'Entregas', icon: 'car-outline', route: '/admin/deliveries', image: NAV_IMAGES.deliveries, color: Colors.success },
+          ].map((item, index) => {
+            const cardInputRange = [-1, 0, 180 * index, 180 * (index + 1.2)];
+            
+            // Animación de deslizamiento hacia arriba y desvanecimiento
+            const opacity = scrollY.interpolate({
+              inputRange: cardInputRange,
+              outputRange: [1, 1, 1, 0],
+              extrapolate: 'clamp'
+            });
+
+            const translateY = scrollY.interpolate({
+              inputRange: cardInputRange,
+              outputRange: [0, 0, 0, -25],
+              extrapolate: 'clamp'
+            });
+
+            return (
+              <Animated.View
+                key={item.label}
+                style={[
+                  styles.animatedNavContainer,
+                  { opacity, transform: [{ translateY }] }
+                ]}
+              >
+                <TouchableOpacity
+                  style={[styles.navCard, { borderColor: `${item.color}44` }]}
+                  onPress={() => router.push(item.route as any)}
+                  activeOpacity={0.9}
+                >
+                  <Image source={{ uri: item.image }} style={styles.navCardBg} resizeMode="cover" />
+                  <LinearGradient
+                    colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.8)']}
+                    start={{ x: 0, y: 0.2 }}
+                    end={{ x: 0.9, y: 0.8 }}
+                    style={styles.navCardGradient}
+                  />
+                  
+                  <View style={styles.navCardBody}>
+                    <View style={[styles.navIconWrapper, { backgroundColor: `${item.color}20` }]}>
+                      <Ionicons name={item.icon as any} size={22} color="#fff" />
+                    </View>
+                    <Text style={styles.navLabel}>{item.label}</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#fff" style={styles.navChevron} />
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          })}
+
+          {/* Órdenes recientes */}
+          <View style={styles.dividerRow}>
+            <Text style={styles.sectionTitle}>Órdenes Recientes</Text>
+            <View style={styles.subLine} />
+          </View>
+
+          {orders.map((order) => {
+            const color = STATE_COLORS[order.state] ?? Colors.textMuted;
+            const NEXT_STATES: Record<string, string> = {
+              pending: 'components_ready',
+              components_ready: 'assembling',
+              assembling: 'software_install',
+              software_install: 'testing',
+              testing: 'ready',
+              ready: 'delivered',
+            };
+            const nextState = NEXT_STATES[order.state];
+
+            return (
+              <View key={order.id} style={styles.orderCard}>
+                <View style={styles.orderHeader}>
+                  <View>
+                    <Text style={styles.orderId}>#{order.id.slice(-6).toUpperCase()}</Text>
+                    <Text style={[styles.orderState, { color }]}>
+                      {ORDER_STATE_LABELS[order.state]}
+                    </Text>
+                  </View>
+                  <Text style={styles.orderPrice}>{formatPrice(order.totalPrice)}</Text>
+                </View>
+
+                {nextState && (
+                  <TouchableOpacity
+                    style={[styles.advanceBtn, { borderColor: color, backgroundColor: `${color}06` }]}
+                    onPress={() => updateState(order.id, nextState)}
+                  >
+                    <Ionicons name="arrow-forward-circle" size={16} color={color} />
+                    <Text style={[styles.advanceBtnText, { color }]}>
+                      Avanzar a: {ORDER_STATE_LABELS[nextState]}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })}
+
+          {/* Botón de logout */}
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleSignOut} activeOpacity={0.8}>
+            <Ionicons name="log-out-outline" size={20} color={Colors.error} />
+            <Text style={styles.logoutText}>Cerrar sesión</Text>
           </TouchableOpacity>
-        ))}
-
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleSignOut}>
-          <Ionicons name="log-out-outline" size={20} color={Colors.error} />
-          <Text style={styles.logoutText}>Cerrar sesión</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+        </View>
+      </Animated.ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, backgroundColor: Colors.background },
-  loadingText: { color: Colors.textMuted, fontSize: FontSize.md },
-  header: { paddingTop: 56, paddingBottom: Spacing.lg, paddingHorizontal: Spacing.lg, gap: Spacing.xs },
-  title: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.textPrimary },
-  subtitle: { fontSize: FontSize.sm, color: Colors.primary },
-  body: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xxl },
-  metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  metricCard: {
-    width: '47%',
-    backgroundColor: Colors.cardLight,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    borderWidth: 1,
+  mainContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: Spacing.xl * 2,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.md,
+    backgroundColor: Colors.background,
+  },
+  loadingText: {
+    color: Colors.textMuted,
+    fontSize: FontSize.md,
+    fontWeight: '600',
+  },
+
+  // Cabecera
+  header: {
+    paddingTop: 56,
+    paddingBottom: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
     gap: Spacing.xs,
   },
-  metricValue: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.textOnLight },
-  metricLabel: { fontSize: FontSize.xs, color: Colors.textOnLightMuted },
-  sectionTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.textPrimary },
+  title: {
+    fontSize: FontSize.xxl,
+    fontWeight: '900',
+    color: Colors.textPrimary,
+  },
+  subtitle: {
+    fontSize: FontSize.sm,
+    color: Colors.textMuted,
+    fontWeight: '600',
+  },
+
+  body: {
+    paddingHorizontal: 12, // Alineación al ras de la pantalla futurista
+    gap: Spacing.md,
+  },
+
+  // Grilla de métricas premium
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: Spacing.sm,
+  },
+  metricCard: {
+    width: '48.5%',
+    height: 125,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    position: 'relative',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  cardBg: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+  },
+  cardGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  metricContent: {
+    ...StyleSheet.absoluteFillObject,
+    padding: Spacing.sm,
+    justifyContent: 'space-between',
+  },
+  metricIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  metricValue: {
+    fontSize: FontSize.md + 2,
+    fontWeight: '900',
+    color: '#fff',
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  metricLabel: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  cardChevron: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
+
+  // Separador de secciones con estilo neón sutil
+  dividerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: Spacing.md,
+    marginBottom: Spacing.xs,
+  },
+  sectionTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
+  subLine: {
+    height: 3,
+    width: 45,
+    backgroundColor: Colors.primary,
+    borderRadius: 1.5,
+  },
+
+  // Tarjetas de navegación premium tipo banners
+  animatedNavContainer: {
+    width: '100%',
+    marginVertical: 4,
+  },
+  navCard: {
+    height: 90,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    position: 'relative',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  navCardBg: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  navCardGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  navCardBody: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.md,
+  },
+  navIconWrapper: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  navLabel: {
+    flex: 1,
+    fontSize: FontSize.md,
+    fontWeight: '800',
+    color: '#fff',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  navChevron: {
+    alignSelf: 'center',
+  },
+
+  // Órdenes Recientes
   orderCard: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.md,
@@ -212,37 +506,62 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     gap: Spacing.sm,
+    elevation: 1.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
   },
-  orderHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  orderId: { fontSize: FontSize.md, fontWeight: '700', color: Colors.textPrimary },
-  orderState: { fontSize: FontSize.sm, fontWeight: '600', marginTop: 2 },
-  orderPrice: { fontSize: FontSize.md, fontWeight: '700', color: Colors.textPrimary },
+  orderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  orderId: {
+    fontSize: FontSize.md,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  orderState: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  orderPrice: {
+    fontSize: FontSize.md,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
   advanceBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: Spacing.sm,
     borderWidth: 1,
     borderRadius: BorderRadius.sm,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
+    height: 38,
   },
-  advanceBtnText: { fontSize: FontSize.sm, fontWeight: '600' },
-  navCard: {
+  advanceBtnText: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+  },
+
+  // Botón cerrar sesión
+  logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    justifyContent: 'center',
+    gap: Spacing.sm,
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.error,
+    marginTop: Spacing.sm,
   },
-  navLabel: { flex: 1, fontSize: FontSize.md, fontWeight: '600', color: Colors.textPrimary },
-  logoutBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: Spacing.sm, backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.md, padding: Spacing.md,
-    borderWidth: 1, borderColor: Colors.error, marginTop: Spacing.sm,
+  logoutText: {
+    fontSize: FontSize.md,
+    fontWeight: '800',
+    color: Colors.error,
   },
-  logoutText: { fontSize: FontSize.md, fontWeight: '700', color: Colors.error },
 });

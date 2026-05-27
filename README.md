@@ -799,6 +799,26 @@ Cualquier vendedor toca "Tomar cotización" → in_review (solo él la gestiona 
 
 ---
 
+## Actualización — 26 de Mayo 2026
+
+### Cesta de Compra, Preset Builder Interactivo y Flujo de Compra Directa
+
+Se integraron de forma completa mejoras en la experiencia de usuario (UX) del menú principal, la personalización avanzada de ensambles y el bypass de aprobaciones de vendedor para compras directas.
+
+#### Resumen de Cambios Aplicados
+
+| Cambio | Archivos Modificados | Detalle |
+|--------|----------------------|---------|
+| **Menú Principal Simplificado** | `mobile/app/(tabs)/index.tsx` | Se removió el desglose de componentes inline al expandir una categoría. En su lugar, ahora se muestra únicamente la explicación y el botón premium **"Armar Computadora"** con el color temático correspondiente. |
+| **Corrección de Márgenes y Escala** | `mobile/app/(tabs)/index.tsx` | Modificamos las interpolaciones de escala del scroll vertical para que las tarjetas de categorías se mantengan al 100% de su tamaño durante las transiciones, aprovechando el 100% de los márgenes laterales futuristas de la pantalla. |
+| **Nueva Pantalla Preset Builder Interactivo** | `mobile/app/builder/preset.tsx`, `mobile/app/_layout.tsx` | Pantalla dedicada de ensamble que inicializa `builderStore` con las piezas predefinidas del preset seleccionado. Permite a los usuarios tocar cualquier componente para abrir el selector oficial y **cambiarlo por cualquier pieza compatible y con stock en el inventario real**, actualizando precios y totalizadores en tiempo real. |
+| **Bypass de Compra Directa sin Esperas** | `backend/src/modules/quotes/quotes.service.js` | Modificamos `acceptQuote` en el backend para permitir compras inmediatas. El cliente ahora puede aceptar e ingresar dirección de entrega/pago para cotizaciones tanto en estado `'ready'` como `'confirmed'` (creadas directamente desde la cesta o el builder). |
+| **Asignación y Reclamación de Pedidos Pagados** | `backend/src/modules/quotes/quotes.service.js` | Se ajustó la transacción de `claimQuote` en el backend para permitir a los empleados reclamar cotizaciones que ya se encuentran en estado de pago enviado (`'payment_submitted'`) sin resetear su estado, facilitando que el vendedor verifique los comprobantes de pago de forma inmediata. |
+| **Rediseño Premium del Panel del Administrador** | `mobile/app/admin/dashboard.tsx` | Se integró scroll animado nativo (`Animated.ScrollView`) con interpolaciones fluidas y transiciones sutiles de escala y desvanecimiento en el dashboard administrativo. |
+| **Imágenes Temáticas y Gestión de Personal** | `mobile/app/admin/dashboard.tsx`, `mobile/app/admin/vendors.tsx` | Se aplicaron imágenes de fondo de Unsplash a todos los cuadros métricos y banners de gestión con capas de degradado translúcidas. Se renombró la sección de empleados a **"Gestión de Personal"** de forma coherente en todo el flujo. |
+
+---
+
 ## Guía de inicio para compañeros del equipo
 
 > Requisito previo: tener Node.js 18+ y la app **Expo Go** instalada en el teléfono.

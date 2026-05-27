@@ -8,6 +8,8 @@
     "scheme": "zonapc",
     "userInterfaceStyle": "light",
     "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
       "backgroundColor": "#F2F0EA"
     },
     "plugins": [

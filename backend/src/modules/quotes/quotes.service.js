@@ -140,7 +140,7 @@ async function acceptQuote(quoteId, userId, { deliveryAddress, deliveryDepartmen
   const ref = getDb().collection(COLLECTION).doc(quoteId);
   const doc = await ref.get();
   if (!doc.exists || doc.data().userId !== userId) return null;
-  if (doc.data().status !== 'ready') return null;
+  if (doc.data().status !== 'ready' && doc.data().status !== 'confirmed') return null;
 
   await ref.update({
     status: 'accepted',
@@ -212,10 +212,13 @@ async function claimQuote(quoteId, vendorId) {
     const doc = await tx.get(ref);
     if (!doc.exists) throw new Error('Cotización no encontrada');
     const data = doc.data();
-    if (data.status !== 'confirmed') throw new Error('La cotización ya no está disponible');
+    if (data.status !== 'confirmed' && data.status !== 'payment_submitted') {
+      throw new Error('La cotización ya no está disponible');
+    }
     if (data.vendorId) throw new Error('Esta cotización ya fue tomada por otro vendedor');
-    tx.update(ref, { vendorId, status: 'in_review', claimedAt: new Date().toISOString() });
-    claimedQuote = { id: quoteId, ...data, vendorId, status: 'in_review' };
+    const nextStatus = data.status === 'payment_submitted' ? 'payment_submitted' : 'in_review';
+    tx.update(ref, { vendorId, status: nextStatus, claimedAt: new Date().toISOString() });
+    claimedQuote = { id: quoteId, ...data, vendorId, status: nextStatus };
   });
 
   // Guardar nombre del vendedor (fuera de la transacción para no bloquearla)

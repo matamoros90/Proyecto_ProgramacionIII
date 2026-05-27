@@ -106,8 +106,8 @@ export default function VendorsScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.title}>Gestionar Empleados</Text>
-          <Text style={styles.subtitle}>Crea y administra cuentas del área de ventas</Text>
+          <Text style={styles.title}>Gestión de Personal</Text>
+          <Text style={styles.subtitle}>Crea y administra cuentas de los empleados del sistema</Text>
         </LinearGradient>
 
         <View style={styles.body}>

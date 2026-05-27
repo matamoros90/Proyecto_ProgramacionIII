@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, Modal, FlatList,
@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { acceptQuote, submitPayment } from '../../services/orders.service';
 import { Colors } from '../../constants/colors';
 import { Spacing, FontSize, BorderRadius } from '../../constants/theme';
+import { useAuth } from '../../hooks/useAuth';
 
 const DEPARTMENTS = [
   'Alta Verapaz','Baja Verapaz','Chimaltenango','Chiquimula','El Progreso',
@@ -40,6 +41,25 @@ export default function PaymentScreen() {
 
   // Bank state
   const [bankRef, setBankRef] = useState('');
+
+  const { profile } = useAuth();
+
+  // Prefill address from profile when it's available
+  useEffect(() => {
+    if (profile) {
+      if (profile.address && !address) {
+        setAddress(profile.address);
+      }
+      if (profile.address) {
+        const foundDept = DEPARTMENTS.find(dept => 
+          profile.address?.toLowerCase().includes(dept.toLowerCase())
+        );
+        if (foundDept && !department) {
+          setDepartment(foundDept);
+        }
+      }
+    }
+  }, [profile]);
 
   function formatCardNumber(text: string) {
     const digits = text.replace(/\D/g, '').slice(0, 16);
@@ -215,6 +235,39 @@ export default function PaymentScreen() {
         {/* ── PASO 3a: Tarjeta ───────────────────────────────────── */}
         {step === 'card' && (
           <>
+            {profile?.savedCard && (
+              <View style={{ marginBottom: Spacing.md }}>
+                <TouchableOpacity
+                  style={styles.savedCardSelect}
+                  onPress={async () => {
+                    setSubmitting(true);
+                    try {
+                      await submitPayment(quoteId!, { method: 'card', cardLast4: profile.savedCard!.last4 });
+                      showSuccess();
+                    } catch (err: any) {
+                      Alert.alert('Error', err.message);
+                    } finally {
+                      setSubmitting(false);
+                    }
+                  }}
+                >
+                  <Ionicons name="shield-checkmark" size={24} color={Colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.savedCardTitle}>Pagar con tarjeta guardada</Text>
+                    <Text style={styles.savedCardSub}>
+                      {profile.savedCard.brand === 'visa' ? 'Visa' : 'Mastercard'} •••• {profile.savedCard.last4}
+                    </Text>
+                  </View>
+                  <Ionicons name="arrow-forward" size={18} color={Colors.primary} />
+                </TouchableOpacity>
+
+                <View style={styles.orDivider}>
+                  <View style={styles.orDividerLine} />
+                  <Text style={styles.orDividerText}>O ingresar una nueva tarjeta</Text>
+                  <View style={styles.orDividerLine} />
+                </View>
+              </View>
+            )}
             <Text style={styles.fieldLabel}>Número de tarjeta</Text>
             <View style={styles.inputRow}>
               <Ionicons name="card-outline" size={20} color={Colors.textMuted} style={styles.inputIcon} />
@@ -445,4 +498,42 @@ const styles = StyleSheet.create({
   deptItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border },
   deptItemActive: { backgroundColor: Colors.primaryGlow },
   deptText: { fontSize: FontSize.md, color: Colors.textPrimary },
+  savedCardSelect: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    marginBottom: Spacing.xs,
+  },
+  savedCardTitle: {
+    fontSize: FontSize.md,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  savedCardSub: {
+    fontSize: FontSize.sm,
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
+  orDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginVertical: Spacing.md,
+  },
+  orDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
+  },
+  orDividerText: {
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
+    fontWeight: '600',
+  },
 });
