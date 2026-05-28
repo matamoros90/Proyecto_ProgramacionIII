@@ -2,7 +2,7 @@ import axios from 'axios';
 import { auth } from './firebase.config';
 import Constants from 'expo-constants';
 
-const RAILWAY_URL = 'https://roberts-particle-nobody-dual.trycloudflare.com/api';
+const RAILWAY_URL = 'https://zonapc-backend-production.up.railway.app/api';
 
 function resolveBackendUrl(): string {
   // Detecta la IP local automáticamente cuando el dispositivo está en la misma red WiFi

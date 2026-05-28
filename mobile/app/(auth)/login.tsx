@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, Alert, Image, ScrollView,
@@ -16,6 +16,7 @@ export default function LoginScreen() {
   const [remember, setRemember] = useState(false);
   const [loading,  setLoading]  = useState(false);
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
 
   async function handleLogin() {
     if (!email || !password) {
@@ -48,10 +49,11 @@ export default function LoginScreen() {
       <View style={[s.orb, s.orbSmall]} pointerEvents="none" />
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
         style={{ flex: 1 }}
       >
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={[s.scroll, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -100,6 +102,7 @@ export default function LoginScreen() {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPass}
+                onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150)}
               />
               <TouchableOpacity onPress={() => setShowPass(v => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Ionicons
