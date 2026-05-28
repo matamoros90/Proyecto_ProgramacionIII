@@ -34,3 +34,5 @@ web-build/
 # Carpetas nativas generadas por expo prebuild (EAS las genera en la nube)
 mobile/android/
 mobile/ios/
+mobile/.env
+mobile/.env.local

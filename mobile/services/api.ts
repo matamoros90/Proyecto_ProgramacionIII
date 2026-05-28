@@ -5,7 +5,11 @@ import Constants from 'expo-constants';
 const RAILWAY_URL = 'https://zonapc-backend-production.up.railway.app/api';
 
 function resolveBackendUrl(): string {
-  // Detecta la IP local automáticamente cuando el dispositivo está en la misma red WiFi
+  // 1. Variable de entorno seteada por start-dev.sh (tunnel de cloudflared)
+  if (process.env.EXPO_PUBLIC_BACKEND_URL) {
+    return process.env.EXPO_PUBLIC_BACKEND_URL;
+  }
+  // 2. LAN — detecta IP local cuando el celular está en la misma red
   const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri) {
     const host = hostUri.split(':')[0];
@@ -13,7 +17,7 @@ function resolveBackendUrl(): string {
       return `http://${host}:3000/api`;
     }
   }
-  // Fuera de LAN (tunnel u otro) → Railway
+  // 3. Fallback → Railway producción
   return RAILWAY_URL;
 }
 
