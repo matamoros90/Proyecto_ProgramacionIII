@@ -79,7 +79,7 @@ export default function CartScreen() {
   if (!cartItem) {
     return (
       <View style={styles.container}>
-        <LinearGradient colors={['#DBEAFE', '#EFF6FF']} style={styles.header}>
+        <LinearGradient colors={['#060B14', '#0D1528']} style={styles.header}>
           <Text style={styles.title}>Mi Cesta</Text>
           <Text style={styles.subtitle}>Tu carrito de compras de hardware</Text>
         </LinearGradient>
@@ -114,7 +114,7 @@ export default function CartScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <LinearGradient colors={['#DBEAFE', '#EFF6FF']} style={styles.header}>
+      <LinearGradient colors={['#060B14', '#0D1528']} style={styles.header}>
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.title}>Mi Cesta</Text>

@@ -8,6 +8,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../services/firebase.config';
 import { useAuthStore } from '../stores/authStore';
 import api from '../services/api';
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 
 // Expo Go SDK 53+ eliminó notificaciones remotas.
 // NO importamos expo-notifications estáticamente — se carga con require() solo en builds nativos.
@@ -107,8 +108,17 @@ export default function RootLayout() {
   }, [isInitialized, firebaseUser, segments]);
 
   return (
+    <ThemeProvider>
+      <ThemedRoot />
+    </ThemeProvider>
+  );
+}
+
+function ThemedRoot() {
+  const { isDark } = useTheme();
+  return (
     <>
-      <StatusBar style="dark" backgroundColor="#EFF6FF" />
+      <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor="transparent" translucent />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />

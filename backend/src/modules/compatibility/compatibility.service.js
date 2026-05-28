@@ -136,4 +136,4 @@ function validateBuild(build) {
   };
 }
 
-module.exports = { validateBuild };
+module.exports = { validateBuild, CASE_COMPAT, SOCKET_COMPAT };

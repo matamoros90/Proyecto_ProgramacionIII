@@ -250,7 +250,7 @@ export default function VendorDashboard() {
         <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={Colors.primary} />
       }
     >
-      <LinearGradient colors={['#DBEAFE', '#EFF6FF']} style={styles.header}>
+      <LinearGradient colors={['#060B14', '#0D1528']} style={styles.header}>
         <Text style={styles.title}>Panel Vendedor</Text>
         <Text style={styles.subtitle}>Gestiona tus cotizaciones</Text>
       </LinearGradient>

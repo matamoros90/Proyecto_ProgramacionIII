@@ -129,7 +129,7 @@ export default function QuotesScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#DBEAFE', '#EFF6FF']} style={styles.header}>
+      <LinearGradient colors={['#060B14', '#0D1528']} style={styles.header}>
         <Text style={styles.title}>Mis Cotizaciones</Text>
         <Text style={styles.subtitle}>{quotes.length} cotización(es)</Text>
       </LinearGradient>

@@ -102,7 +102,7 @@ export default function VendorsScreen() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <LinearGradient colors={['#DBEAFE', '#EFF6FF']} style={styles.header}>
+        <LinearGradient colors={['#060B14', '#0D1528']} style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
           </TouchableOpacity>

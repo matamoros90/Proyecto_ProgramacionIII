@@ -42,7 +42,7 @@ export default function RegisterScreen() {
   }
 
   return (
-    <LinearGradient colors={['#EFF6FF', '#DBEAFE']} style={styles.container}>
+    <LinearGradient colors={['#060B14', '#0D1528']} style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.inner} showsVerticalScrollIndicator={false}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>

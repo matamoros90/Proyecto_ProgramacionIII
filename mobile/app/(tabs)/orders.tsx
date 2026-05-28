@@ -110,7 +110,7 @@ export default function OrdersScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#DBEAFE', '#EFF6FF']} style={styles.header}>
+      <LinearGradient colors={['#060B14', '#0D1528']} style={styles.header}>
         <Text style={styles.title}>Mis Órdenes</Text>
         <Text style={styles.subtitle}>{orders.length} orden(es) encontrada(s)</Text>
       </LinearGradient>

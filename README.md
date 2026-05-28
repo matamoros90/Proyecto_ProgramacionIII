@@ -819,6 +819,192 @@ Se integraron de forma completa mejoras en la experiencia de usuario (UX) del me
 
 ---
 
+## Actualización — 27 de Mayo 2026 (Otto)
+
+### Rediseño visual premium — sistema de temas dual, corrección de contraste y mejoras al builder
+
+---
+
+### 1. Sistema de temas dual Oscuro / Claro (`mobile/constants/colors.ts`, `mobile/contexts/ThemeContext.tsx`)
+
+Se implementó un sistema de temas completo con persistencia entre sesiones.
+
+**Nuevos archivos:**
+
+| Archivo | Descripción |
+|---------|-------------|
+| `mobile/contexts/ThemeContext.tsx` | `ThemeProvider` + hook `useTheme()` — expone `colors`, `isDark` y `toggleTheme()` |
+
+**`mobile/constants/colors.ts` reescrito:**
+
+| Paleta | `DarkTheme` | `LightTheme` |
+|--------|-------------|--------------|
+| Fondo | `#0B0F17` | `#F4F6F8` |
+| Superficie | `#151A23` | `#FFFFFF` |
+| Primario | `#3B82F6` | `#2563EB` |
+| Secundario | `#8B5CF6` | `#7C3AED` |
+| Acento | `#F59E0B` | `#D97706` |
+| Texto principal | `#F1F5F9` | `#0F172A` |
+
+- El tema oscuro es el predeterminado (`Colors = DarkTheme`).
+- Persiste entre sesiones usando `AsyncStorage` con la clave `@zonapc_theme`.
+- `mobile/app/_layout.tsx` envuelve toda la app en `<ThemeProvider>` y adapta el `StatusBar` automáticamente.
+- `mobile/app/(tabs)/_layout.tsx` consume `useTheme()` para los colores de la barra de navegación inferior.
+
+**Helpers añadidos en `mobile/constants/theme.ts`:**
+```typescript
+glowShadow(color, radius?, opacity?)  // sombra de neón reutilizable
+cardShadow(isDark)                     // sombra de tarjeta adaptativa
+```
+
+---
+
+### 2. Corrección global de contraste — headers oscuros en toda la app
+
+**Problema:** 20+ pantallas tenían el header con gradiente azul claro `['#DBEAFE', '#EFF6FF']` mientras que `Colors.textPrimary` apuntaba a `#F1F5F9` (blanco del `DarkTheme`). Resultado: texto invisible.
+
+**Solución:** El gradiente de header en **todas las pantallas** fue cambiado a `['#060B14', '#0D1528']` (azul noche profundo), que coincide con el fondo oscuro del login y da contraste óptimo para texto blanco.
+
+**Pantallas corregidas (28 en total):**
+
+| Grupo | Pantallas |
+|-------|-----------|
+| Builder | `custom.tsx`, `budget.tsx`, `[type].tsx`, `preset.tsx` |
+| Tabs | `quotes.tsx`, `orders.tsx`, `learn.tsx`, `builder.tsx` |
+| Cotizaciones | `quote/[id].tsx`, `quote/payment.tsx` |
+| Órdenes | `order/[id].tsx` |
+| Perfil | `profile.tsx` |
+| Admin | `dashboard.tsx`, `deliveries.tsx`, `inventory.tsx`, `orders.tsx`, `quotes.tsx`, `revenue.tsx`, `vendors.tsx` |
+| Vendedor | `vendor/dashboard.tsx` |
+| Auth | `register.tsx` (fondo completo → oscuro, coherente con login) |
+
+---
+
+### 3. Pantalla de inicio — rediseño completo (`mobile/app/(tabs)/index.tsx`)
+
+| Cambio | Detalle |
+|--------|---------|
+| **Tarjetas de categoría con imagen** | `BuilderCard` con imagen de fondo, degradado overlay y animación de escala al presionar |
+| **Navegación directa al preset** | Al tocar una tarjeta de categoría se va directo a `/builder/preset` sin botón intermedio "Armar Computadora" |
+| **Toggle "Ver todo" / "Ver menos"** | Sección de acciones rápidas colapsa/expande las categorías |
+| **Avatar → perfil** | El avatar del header ahora es `TouchableOpacity` que navega a `/profile` |
+| **Barra de búsqueda eliminada** | Diseño más limpio; búsqueda disponible dentro de cada selector de componentes |
+| **Dashboard de estadísticas eliminado** | Se removió el widget de "PCs armadas hoy / disponibilidad / estado del sistema" |
+| **Exportaciones públicas** | `CATEGORIES`, `CategoryItem`, `ComponentDetails` exportadas para uso en `builder/preset.tsx` |
+
+---
+
+### 4. Pantalla de login — rediseño completo (`mobile/app/(auth)/login.tsx`)
+
+| Elemento | Descripción |
+|----------|-------------|
+| Fondo | Gradiente oscuro `['#060B14', '#0D1528', '#130B2B', '#0A0F1E']` |
+| Orbes decorativos | 3 esferas de luz translúcidas (azul, violeta, pequeña) posicionadas absolutamente |
+| Logo | `assets/images/logo.png` preservado (150×150) |
+| Card glassmorphism | `rgba(255,255,255,0.05)` con borde sutil y sombra profunda |
+| Botón de ingreso | Gradiente `['#3B82F6', '#6D28D9']` con ícono de flecha |
+| Checkbox "Recordarme" | Animado con Ionicons, estado persistido en la UI |
+| Social buttons | Google / Facebook / Apple con Alert "Próximamente" |
+
+---
+
+### 5. Preset Builder — imágenes reales de componentes (`mobile/app/builder/preset.tsx`)
+
+El selector de ensambles predefinidos ahora muestra imágenes reales en lugar de íconos genéricos.
+
+**Flujo de enriquecimiento:**
+
+```
+Preset abre
+    │
+    ├─ useEffect #1 → carga specs/precios estáticos en builderStore
+    │
+    └─ useEffect #2 → para cada componente, fetch al backend en paralelo (Promise.all)
+              │
+              ├─ busca coincidencia exacta de modelo: "Ryzen 7 7700X"
+              ├─ si no, coincidencia parcial por nombre
+              └─ si hay match con imagen → actualiza builderStore con URL de Firebase Storage
+```
+
+**Cadena de fallbacks:**
+1. `activeComp.image` — imagen real de Firebase Storage (backend match)
+2. `COMP_IMGS[type]` — foto Unsplash del tipo de componente (CPU, GPU, MB, etc.)
+3. Ícono `Ionicons` — si ambas URLs fallan
+
+**Nuevo sub-componente `ComponentImage`** — maneja la carga con `onError` para pasar al siguiente fallback sin romper la UI.
+
+---
+
+### 6. Custom Builder — barra de errores interactiva (`mobile/app/builder/custom.tsx`)
+
+La barra de alertas de compatibilidad ahora es tappable y muestra el detalle completo de cada error o advertencia en un `Alert.alert` con lista numerada.
+
+| Estado | Comportamiento |
+|--------|---------------|
+| Errores | Barra roja tappable → lista de errores con `• mensaje` |
+| Advertencias | Barra ámbar tappable → lista de advertencias |
+| Sin problemas | Barra verde estática "Build 100% compatible" |
+
+---
+
+### 7. Motor de compatibilidad y recomendaciones — mejoras al backend
+
+#### `backend/src/modules/compatibility/compatibility.service.js`
+
+| Regla | Descripción |
+|-------|-------------|
+| CPU ↔ Motherboard | Socket debe coincidir (AM4, AM5, LGA1700) |
+| RAM ↔ Motherboard | Tipo DDR (DDR4 / DDR5) debe coincidir |
+| Case ↔ Motherboard | ATX soporta todo; mATX soporta mATX e ITX; Mini-ITX solo ITX |
+| PSU | Potencia debe cubrir el consumo total estimado del build |
+
+#### `backend/src/modules/recommendations/recommendations.service.js`
+
+| Mejora | Detalle |
+|--------|---------|
+| **Paso 1.5 — pre-validación** | Antes de asignar un candidato, verifica que no aumente errores de compatibilidad |
+| **Bucle de reparación iterativo** | Hasta 4 rondas; cada ronda corrige un error y vuelve a validar desde el inicio |
+| **Cobertura de reparación** | CPU↔MB socket, RAM↔MB DDR, Case↔MB formFactor, PSU wattage insuficiente |
+
+---
+
+### Resumen de archivos modificados — 27 de Mayo 2026
+
+| Archivo | Tipo de cambio |
+|---------|---------------|
+| `mobile/contexts/ThemeContext.tsx` | **NUEVO** — ThemeProvider con AsyncStorage |
+| `mobile/constants/colors.ts` | Reescrito — sistema dual DarkTheme / LightTheme |
+| `mobile/constants/theme.ts` | Añadidos helpers `glowShadow` y `cardShadow` |
+| `mobile/app/_layout.tsx` | ThemeProvider wrapper; StatusBar adaptativo |
+| `mobile/app/(tabs)/_layout.tsx` | useTheme() para tab bar |
+| `mobile/app/(tabs)/index.tsx` | Rediseño completo; exporta CATEGORIES |
+| `mobile/app/(auth)/login.tsx` | Rediseño completo oscuro con orbes |
+| `mobile/app/(auth)/register.tsx` | Fondo oscuro coherente con login |
+| `mobile/app/builder/preset.tsx` | Imágenes reales; ComponentImage; enriquecimiento desde backend |
+| `mobile/app/builder/custom.tsx` | Header oscuro; barra de errores tappable |
+| `mobile/app/builder/budget.tsx` | Header oscuro |
+| `mobile/app/builder/[type].tsx` | Header oscuro |
+| `mobile/app/profile.tsx` | Header oscuro |
+| `mobile/app/(tabs)/quotes.tsx` | Header oscuro |
+| `mobile/app/(tabs)/orders.tsx` | Header oscuro |
+| `mobile/app/(tabs)/learn.tsx` | Headers oscuros (×2) |
+| `mobile/app/(tabs)/builder.tsx` | Header oscuro |
+| `mobile/app/quote/[id].tsx` | Header oscuro |
+| `mobile/app/quote/payment.tsx` | Header oscuro |
+| `mobile/app/order/[id].tsx` | Header oscuro |
+| `mobile/app/admin/dashboard.tsx` | Header oscuro |
+| `mobile/app/admin/deliveries.tsx` | Header oscuro |
+| `mobile/app/admin/inventory.tsx` | Header oscuro |
+| `mobile/app/admin/orders.tsx` | Header oscuro |
+| `mobile/app/admin/quotes.tsx` | Header oscuro |
+| `mobile/app/admin/revenue.tsx` | Header oscuro |
+| `mobile/app/admin/vendors.tsx` | Header oscuro |
+| `mobile/app/vendor/dashboard.tsx` | Header oscuro |
+| `backend/src/modules/compatibility/compatibility.service.js` | Reglas case/MB; validación PSU |
+| `backend/src/modules/recommendations/recommendations.service.js` | Paso 1.5 y bucle iterativo de reparación |
+
+---
+
 ## Guía de inicio para compañeros del equipo
 
 > Requisito previo: tener Node.js 18+ y la app **Expo Go** instalada en el teléfono.
