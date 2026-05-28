@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, Alert, Image, ScrollView,
+  Alert, Image, ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -16,7 +16,6 @@ export default function LoginScreen() {
   const [remember, setRemember] = useState(false);
   const [loading,  setLoading]  = useState(false);
   const insets = useSafeAreaInsets();
-  const scrollRef = useRef<ScrollView>(null);
 
   async function handleLogin() {
     if (!email || !password) {
@@ -48,15 +47,11 @@ export default function LoginScreen() {
       <View style={[s.orb, s.orbPurple]} pointerEvents="none" />
       <View style={[s.orb, s.orbSmall]} pointerEvents="none" />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={[s.scroll, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
+      <ScrollView
+          contentContainerStyle={[s.scroll, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 120 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
         >
           {/* ── Logo + Título ──────────────────────────────────────────────── */}
           <View style={s.logoSection}>
@@ -102,7 +97,6 @@ export default function LoginScreen() {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPass}
-                onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150)}
               />
               <TouchableOpacity onPress={() => setShowPass(v => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Ionicons
@@ -165,8 +159,7 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </ScrollView>
     </View>
   );
 }
