@@ -122,7 +122,8 @@ function ThemedRoot() {
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor="transparent" translucent />
-      <Stack screenOptions={{ headerShown: false }}>
+      {/* key fuerza re-mount al cambiar tema → pantallas que importan Colors hardcoded se re-renderizan */}
+      <Stack key={isDark ? 'dark' : 'light'} screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="admin/dashboard" />

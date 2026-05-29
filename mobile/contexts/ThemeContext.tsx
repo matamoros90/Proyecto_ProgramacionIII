@@ -5,7 +5,7 @@
  */
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DarkTheme, LightTheme, ThemeColors } from '../constants/colors';
+import { DarkTheme, LightTheme, ThemeColors, applyTheme } from '../constants/colors';
 
 const THEME_KEY = '@zonapc_theme';
 
@@ -24,16 +24,26 @@ const ThemeContext = createContext<ThemeContextValue>({
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [isDark, setIsDark] = useState(true); // oscuro por defecto
 
+  // Aplicar el tema inicial al objeto Colors global (para pantallas que no usan useTheme)
+  useEffect(() => { applyTheme(isDark); }, [isDark]);
+
   // Cargar preferencia persistida
   useEffect(() => {
     AsyncStorage.getItem(THEME_KEY)
-      .then(val => { if (val !== null) setIsDark(val === 'dark'); })
+      .then(val => {
+        if (val !== null) {
+          const dark = val === 'dark';
+          setIsDark(dark);
+          applyTheme(dark);
+        }
+      })
       .catch(() => {});
   }, []);
 
   const toggleTheme = () => {
     setIsDark(prev => {
       const next = !prev;
+      applyTheme(next);
       AsyncStorage.setItem(THEME_KEY, next ? 'dark' : 'light').catch(() => {});
       return next;
     });

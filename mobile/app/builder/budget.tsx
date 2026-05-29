@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, TextInput,
+  ScrollView, TextInput, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -78,8 +78,20 @@ export default function BudgetBuilderScreen() {
   }, [budget]);
 
   async function handleGenerate() {
-    await generateBuild();
-    router.push('/builder/custom');
+    try {
+      const result = await generateBuild();
+      if (!result) {
+        Alert.alert('Sin categoría', 'Selecciona un perfil antes de generar.');
+        return;
+      }
+      router.push('/builder/custom');
+    } catch (err: any) {
+      Alert.alert(
+        'No se pudo generar el PC',
+        (err?.message ?? 'Error desconocido') +
+        '\n\nVerifica que el servidor esté corriendo. Toca "Configurar servidor" en el login si necesitas cambiar la URL.',
+      );
+    }
   }
 
   function applyCustomBudget() {

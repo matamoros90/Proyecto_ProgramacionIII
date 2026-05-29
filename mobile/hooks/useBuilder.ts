@@ -7,11 +7,15 @@ export function useBuilder() {
   const store = useBuilderStore();
 
   const generateBuild = useCallback(async () => {
-    if (!store.category) return;
+    if (!store.category) return null;
     store.setLoadingRecommendation(true);
     try {
       const result = await generateRecommendation(store.budget, store.category);
       store.applyRecommendation(result);
+      return result;
+    } catch (err) {
+      // Propaga el error para que la pantalla pueda mostrarlo al usuario
+      throw err;
     } finally {
       store.setLoadingRecommendation(false);
     }

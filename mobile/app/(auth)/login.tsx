@@ -176,6 +176,15 @@ export default function LoginScreen() {
                 <Text style={s.registerLink}>Regístrate</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Config servidor — visible pero discreto */}
+            <TouchableOpacity
+              style={s.serverConfigBtn}
+              onPress={() => router.push('/dev-config' as any)}
+            >
+              <Ionicons name="settings-outline" size={14} color="#6B7280" />
+              <Text style={s.serverConfigText}>Configurar servidor</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -328,4 +337,9 @@ const s = StyleSheet.create({
   },
   registerText: { color: '#64748B', fontSize: 14 },
   registerLink: { color: '#8B5CF6', fontSize: 14, fontWeight: '700' },
+  serverConfigBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, marginTop: 12, paddingVertical: 8,
+  },
+  serverConfigText: { color: '#6B7280', fontSize: 12, fontWeight: '500' },
 });

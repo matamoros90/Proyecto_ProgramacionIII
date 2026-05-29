@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet,
-  TouchableOpacity, TextInput, Image, ActivityIndicator,
+  TouchableOpacity, TextInput, Image, ActivityIndicator, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -114,9 +114,18 @@ export default function ComponentSelectorScreen() {
     setLoading(true);
     getComponents({ type: compType })
       .then((data) => {
-        const sorted = [...data].sort((a, b) => b.performanceScore - a.performanceScore);
+        const list = Array.isArray(data) ? data : [];
+        const sorted = [...list].sort((a, b) => b.performanceScore - a.performanceScore);
         setComponents(sorted);
         setFiltered(sorted);
+      })
+      .catch((err) => {
+        Alert.alert(
+          'No se pudieron cargar los componentes',
+          (err?.message ?? 'Error desconocido') +
+          '\n\nVerifica que el servidor esté corriendo. Toca "Configurar servidor" en el login si necesitas cambiar la URL.',
+          [{ text: 'OK', onPress: () => router.back() }],
+        );
       })
       .finally(() => setLoading(false));
   }, [compType]);

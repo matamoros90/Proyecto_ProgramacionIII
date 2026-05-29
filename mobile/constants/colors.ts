@@ -201,5 +201,18 @@ export const LightTheme: ThemeColors = {
   cardLightBorder: '#BFDBFE',
 };
 
-// Exportación por defecto — tema oscuro como base para pantallas sin contexto
-export const Colors: ThemeColors = DarkTheme;
+// Exportación por defecto — objeto mutable que cambia con el tema.
+// applyTheme() muta sus propiedades para que todas las pantallas que importen
+// "Colors" reflejen el tema actual cuando el árbol se re-monte.
+export const Colors: ThemeColors = { ...DarkTheme };
+
+/**
+ * Aplica un tema mutando las propiedades de Colors.
+ * Llamado por ThemeContext al cambiar el tema.
+ * Las pantallas necesitan re-render para que el cambio se refleje
+ * (esto se logra con el `key` del Stack en _layout.tsx).
+ */
+export function applyTheme(isDark: boolean): void {
+  const source = isDark ? DarkTheme : LightTheme;
+  Object.assign(Colors, source);
+}
