@@ -1046,6 +1046,11 @@ La barra de alertas de compatibilidad ahora es tappable y muestra el detalle com
 | **Script `start-dev.sh` con tunnel automático** | `start-dev.sh`, `.gitignore` | Levanta backend + tunnel Cloudflare + Expo en un solo comando. La URL del backend se inyecta automáticamente en `mobile/.env`. No requiere estar en la misma red WiFi ni cuenta en ningún servicio. |
 | **Variable `EXPO_PUBLIC_BACKEND_URL`** | `mobile/services/api.ts` | Nueva prioridad: variable de entorno > LAN auto-detectada > Railway producción. El script `start-dev.sh` setea la variable automáticamente. |
 | **URL de Railway corregida** | `mobile/services/api.ts` | Reemplazada URL temporal de Cloudflare (expirada) por la URL real de Railway: `zonapc-backend-production.up.railway.app`. |
+| **Bug: validación incorrecta en Preset Builder** | `mobile/app/builder/preset.tsx` | El botón "Agregar a la cesta" exigía **CPU + GPU + Placa Madre** como obligatorios — bloqueaba las **estaciones de Oficina y Estudiantil**, que usan los gráficos integrados del procesador (Ryzen 3 3200G, Core i5-12400, etc.) y no requieren GPU dedicada. Ahora solo CPU + Placa Madre son obligatorios; GPU es opcional. |
+
+> ### Recordatorio importante
+>
+> Si vas a tocar `mobile/app/builder/preset.tsx`, `(tabs)/index.tsx`, `(auth)/login.tsx` o cualquier archivo del backend de `quotes/`, **lee primero el aviso al inicio de este README**. Estos archivos tienen lógica de negocio crítica que afecta al flujo completo de cotización, autenticación y experiencia del cliente — un cambio descuidado puede romper varias pantallas a la vez. **Trabaja siempre en una rama propia (`git checkout -b feat/...`) y prueba en Expo Go antes de hacer push.**
 
 #### Nuevo flujo de desarrollo recomendado
 

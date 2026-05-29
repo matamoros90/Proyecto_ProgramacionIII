@@ -198,8 +198,9 @@ export default function PresetBuilderScreen() {
     const activeBuild = useBuilderStore.getState().build;
     
     // Validar que tengamos las partes esenciales
-    if (!activeBuild.cpu || !activeBuild.gpu || !activeBuild.motherboard) {
-      Alert.alert('Incompleto', 'Debes incluir al menos CPU, GPU y Placa Madre para guardar el ensamble.');
+    // GPU es opcional: PCs de oficina/estudiantil usan gráficos integrados del CPU
+    if (!activeBuild.cpu || !activeBuild.motherboard) {
+      Alert.alert('Incompleto', 'Debes incluir al menos CPU y Placa Madre para guardar el ensamble.');
       return;
     }
 
