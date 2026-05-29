@@ -69,7 +69,11 @@
       "checkAutomatically": "NEVER"
     },
     "extra": {
-      "router": {}
-    }
+      "router": {},
+      "eas": {
+        "projectId": "a5e2b6a2-7e66-4584-9204-d0498a81468c"
+      }
+    },
+    "owner": "matamoros"
   }
 }

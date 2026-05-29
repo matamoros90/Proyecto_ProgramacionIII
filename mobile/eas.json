@@ -9,7 +9,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "https://succeed-deputy-caring-suspension.trycloudflare.com/api"
+        "EXPO_PUBLIC_BACKEND_URL": "https://sacramento-checklist-gather-comp.trycloudflare.com/api"
       }
     },
     "production": {
