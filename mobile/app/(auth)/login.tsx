@@ -58,11 +58,17 @@ export default function LoginScreen() {
         >
           {/* ── Logo + Título ──────────────────────────────────────────────── */}
           <View style={s.logoSection}>
-            <Image
-              source={require('../../assets/images/logo.png')}
-              style={s.logoImage}
-              resizeMode="contain"
-            />
+            <TouchableOpacity
+              onLongPress={() => router.push('/dev-config' as any)}
+              delayLongPress={800}
+              activeOpacity={1}
+            >
+              <Image
+                source={require('../../assets/images/logo.png')}
+                style={s.logoImage}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
             <Text style={s.appName}>
               ZonaPc{' '}
               <Text style={s.appNameAccent}>Builder</Text>

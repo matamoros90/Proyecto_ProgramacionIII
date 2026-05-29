@@ -26,13 +26,14 @@
         "expo-build-properties",
         {
           "android": {
-            "newArchEnabled": false,
+            "newArchEnabled": true,
             "compileSdkVersion": 35,
             "targetSdkVersion": 35,
             "buildToolsVersion": "35.0.0"
           }
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
@@ -60,7 +61,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "9e756671-56ab-4cf9-9f90-0d7236d02c71"
+        "projectId": "a5e2b6a2-7e66-4584-9204-d0498a81468c"
       }
     },
     "owner": "matamoros"

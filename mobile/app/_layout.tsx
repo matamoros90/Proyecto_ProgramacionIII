@@ -7,8 +7,11 @@ import Constants from 'expo-constants';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../services/firebase.config';
 import { useAuthStore } from '../stores/authStore';
-import api from '../services/api';
+import api, { loadBackendUrlFromStorage } from '../services/api';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
+
+// Hidratar URL del backend desde AsyncStorage antes de cualquier request
+loadBackendUrlFromStorage();
 
 // Expo Go SDK 53+ eliminó notificaciones remotas.
 // NO importamos expo-notifications estáticamente — se carga con require() solo en builds nativos.
@@ -138,6 +141,7 @@ function ThemedRoot() {
         <Stack.Screen name="admin/vendors" />
         <Stack.Screen name="vendor/dashboard" />
         <Stack.Screen name="profile" />
+        <Stack.Screen name="dev-config" />
       </Stack>
     </>
   );

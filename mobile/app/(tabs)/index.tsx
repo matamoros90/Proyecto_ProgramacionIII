@@ -351,9 +351,8 @@ export default function HomeScreen() {
             <Animated.ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              snapToInterval={QA_SLOT}
-              decelerationRate="fast"
-              snapToAlignment="center"
+              snapToOffsets={QUICK_ACTIONS.map((_, i) => i * QA_SLOT)}
+              decelerationRate={0.92}
               contentContainerStyle={{
                 paddingHorizontal: QA_SIDE_PADDING,
                 paddingVertical: Spacing.lg,
