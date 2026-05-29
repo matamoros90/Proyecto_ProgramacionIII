@@ -1079,6 +1079,21 @@ Beneficios:
 
 ---
 
+## Actualización — 30 de Mayo 2026
+
+### APK funcional: 6 problemas resueltos + tema reactivo + ícono ZPC
+
+| # | Problema | Solución |
+|---|---|---|
+| 0/2/3/6 | APK sin backend (componentes vacíos, "Generar PC" no hacía nada, perfil no guardaba) | **EAS no lee `.env` del filesystem** — la URL se agregó a `eas.json > build.preview.env.EXPO_PUBLIC_BACKEND_URL`. Plus: botón **"Configurar servidor"** visible en login + Alerts claros en `budget.tsx` y `[type].tsx` cuando falla la conexión. |
+| 1 | Roles no separados | Consecuencia de #0 — sin backend no se carga el perfil. Se resuelve junto con #0. |
+| 4 | Ícono APK incorrecto (Z azul antigua) | `icon.png` y `adaptive-icon.png` reemplazados con `logo.png` (pin rojo ZPC). |
+| 5 | Tema oscuro/claro solo en Inicio | `Colors` ahora es mutable + función `applyTheme()` en `constants/colors.ts`. ThemeContext la llama al toggle, y `Stack` tiene `key={isDark}` en `_layout.tsx` para forzar re-mount. Todas las pantallas que importan `Colors` ahora cambian de tema sin necesidad de refactorizar cada una. |
+
+> **Regla nueva:** las URLs del tunnel cloudflared cambian en cada reinicio. Si el APK pierde conexión, abre el login → toca **"Configurar servidor"** → pega la nueva URL → **Probar** → **Guardar**. Sin recompilar.
+
+---
+
 ## Guía de inicio para compañeros del equipo
 
 > Requisito previo: tener Node.js 18+ y la app **Expo Go** instalada en el teléfono.
