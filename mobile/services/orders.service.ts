@@ -63,6 +63,10 @@ export async function deleteVendorQuote(quoteId: string): Promise<void> {
   await api.delete(`/quotes/${quoteId}`);
 }
 
+export async function deleteMyQuote(quoteId: string): Promise<void> {
+  await api.delete(`/quotes/${quoteId}/mine`);
+}
+
 export async function sendVendorFollowup(quoteId: string): Promise<void> {
   await api.post(`/quotes/${quoteId}/followup`);
 }

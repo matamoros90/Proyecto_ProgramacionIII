@@ -2,6 +2,32 @@
 
 Plataforma inteligente para cotización, personalización y ensamblaje de computadoras.
 
+---
+
+> ## AVISO IMPORTANTE — Antes de modificar el proyecto
+>
+> Este proyecto es un trabajo académico colaborativo en producción para entrega final.
+> Para **no arruinar el código que ya funciona**, sigue estas reglas estrictamente:
+>
+> 1. **NUNCA** trabajes directamente sobre `main`. Crea tu propia rama:
+>    ```bash
+>    git pull origin main
+>    git checkout -b feat/mi-mejora
+>    ```
+> 2. **Antes de cada sesión** ejecuta `git pull origin main` para tener los cambios más recientes.
+> 3. **Antes de hacer push** levanta el proyecto y verifica que TODO siga funcionando (login, crear cotización, panel admin/vendor, etc.).
+> 4. **NO elimines** archivos, carpetas o configuraciones sin consultar con el equipo.
+> 5. **NO commitees**: `.env`, `node_modules/`, `mobile/android/`, `mobile/ios/`, `mobile/.env`, `google-services.json` del root.
+> 6. **NO uses** `git push --force` en `main` bajo ninguna circunstancia.
+> 7. **NO modifiques** lógica de negocio crítica (compatibilidad, recomendaciones, flujo de cotización/pago) sin discutirlo primero.
+> 8. **NO toques** los archivos de configuración nativos: `app.json`, `eas.json`, `google-services.json` — alteran builds de EAS y autenticación Firebase.
+> 9. Si algo se rompe, **no borres tu trabajo** — pide ayuda antes. Siempre se puede revertir con `git`.
+> 10. Si vas a instalar paquetes nuevos usa `npm ci` (no `npm install`) para respetar el `package-lock.json`.
+>
+> Lee la sección **[Guía de inicio para compañeros del equipo](#guía-de-inicio-para-compañeros-del-equipo)** al final del README antes de empezar.
+
+---
+
 ## Stack Tecnológico
 
 | Capa | Tecnología |
@@ -1005,6 +1031,49 @@ La barra de alertas de compatibilidad ahora es tappable y muestra el detalle com
 
 ---
 
+## Actualización — 29 de Mayo 2026
+
+### Eliminar cotizaciones del cliente, login mejorado y efecto Dock estilo macOS
+
+#### Resumen de cambios
+
+| Cambio | Archivos | Detalle |
+|--------|----------|---------|
+| **Cliente puede eliminar sus cotizaciones** | `backend/src/modules/quotes/quotes.service.js`, `quotes.controller.js`, `quotes.routes.js`, `mobile/services/orders.service.ts`, `mobile/app/(tabs)/quotes.tsx` | Nueva ruta `DELETE /quotes/:id/mine`. El cliente puede eliminar mientras la cotización NO esté en `accepted`, `payment_submitted` o `payment_verified`. UI con diálogo de confirmación y eliminación optimista (revierte si falla). |
+| **Login: teclado cubría el botón Ingresar** | `mobile/app/(auth)/login.tsx` | Restaurado `KeyboardAvoidingView` con `behavior="padding"` (iOS) / `"height"` (Android). El formulario ahora se eleva al aparecer el teclado. |
+| **Login: autocompletado de credenciales** | `mobile/app/(auth)/login.tsx` | Agregados `autoComplete="email"` / `"current-password"`, `textContentType` y `importantForAutofill="yes"`. Android/iOS detectan el formulario y ofrecen credenciales guardadas. La tecla "Ingresar" del teclado envía el formulario. |
+| **Acciones Rápidas — Efecto Dock macOS** | `mobile/app/(tabs)/index.tsx` | El scroll horizontal aplica efecto lupa: el item al centro crece (1.22×), sube ligeramente (-12 px) y los adyacentes se reducen y difuminan progresivamente (0.92× → 0.78×, opacidad 70% → 45%). Snap-to-interval para anclar al centro. Animación nativa 60 fps con `useNativeDriver: true`. |
+| **Script `start-dev.sh` con tunnel automático** | `start-dev.sh`, `.gitignore` | Levanta backend + tunnel Cloudflare + Expo en un solo comando. La URL del backend se inyecta automáticamente en `mobile/.env`. No requiere estar en la misma red WiFi ni cuenta en ningún servicio. |
+| **Variable `EXPO_PUBLIC_BACKEND_URL`** | `mobile/services/api.ts` | Nueva prioridad: variable de entorno > LAN auto-detectada > Railway producción. El script `start-dev.sh` setea la variable automáticamente. |
+| **URL de Railway corregida** | `mobile/services/api.ts` | Reemplazada URL temporal de Cloudflare (expirada) por la URL real de Railway: `zonapc-backend-production.up.railway.app`. |
+
+#### Nuevo flujo de desarrollo recomendado
+
+Antes había que abrir múltiples terminales y configurar IPs manualmente. Ahora:
+
+```bash
+./start-dev.sh
+```
+
+Lo que hace el script:
+1. Mata procesos previos en puertos 3000 y 8081
+2. Inicia el backend (`localhost:3000`)
+3. Crea un tunnel público vía `cloudflared` (sin cuenta, sin registro)
+4. Escribe la URL del backend en `mobile/.env` como `EXPO_PUBLIC_BACKEND_URL`
+5. Inicia Expo con tunnel — escanea el QR y listo
+
+> **Pre-requisito:** instalar `cloudflared` una sola vez:
+> ```bash
+> brew install cloudflare/cloudflare/cloudflared
+> ```
+
+Beneficios:
+- Funciona desde **cualquier red WiFi** (no requiere estar en la misma red que la Mac)
+- Sin cuenta, sin tokens, sin pagos
+- URL fresca cada vez que se reinicia (no se queda colgada como Railway)
+
+---
+
 ## Guía de inicio para compañeros del equipo
 
 > Requisito previo: tener Node.js 18+ y la app **Expo Go** instalada en el teléfono.
@@ -1040,6 +1109,17 @@ npx expo start       # Modo LAN — requiere estar en la misma red que el backen
 ```
 
 Escanea el QR con Expo Go. La app detecta la IP del backend automáticamente cuando están en la misma red.
+
+### 3-bis. Flujo recomendado (un solo comando) — desde 29/05/2026
+
+Si tu red bloquea conexiones entre dispositivos (AP isolation) o no estás en la misma WiFi, usa el script unificado:
+
+```bash
+brew install cloudflare/cloudflare/cloudflared   # solo la primera vez
+./start-dev.sh                                    # desde la raíz del repo
+```
+
+Levanta backend + tunnel público + Expo automáticamente. Funciona desde cualquier red.
 
 ### 4. Credenciales de prueba
 

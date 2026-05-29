@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getMyQuotes } from '../../services/orders.service';
+import { getMyQuotes, deleteMyQuote } from '../../services/orders.service';
 import type { Quote, QuoteStatus } from '../../types';
 import { Colors } from '../../constants/colors';
 import { Spacing, FontSize, BorderRadius } from '../../constants/theme';
@@ -39,9 +39,34 @@ export default function QuotesScreen() {
 
   useEffect(() => { load(); }, []);
 
+  function handleDelete(quote: Quote) {
+    Alert.alert(
+      'Eliminar cotización',
+      `¿Seguro que deseas eliminar esta cotización por ${formatPrice(quote.totalPrice)}? Esta acción no se puede deshacer.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            const prev = quotes;
+            setQuotes(p => p.filter(q => q.id !== quote.id));
+            try {
+              await deleteMyQuote(quote.id);
+            } catch (err: any) {
+              setQuotes(prev);
+              Alert.alert('No se pudo eliminar', err.message ?? 'Inténtalo de nuevo');
+            }
+          },
+        },
+      ],
+    );
+  }
+
   function renderQuote({ item }: { item: Quote }) {
     const cfg = STATUS_CONFIG[item.status] ?? STATUS_CONFIG.draft;
     const canView = ['in_review', 'ready', 'accepted', 'payment_submitted', 'payment_verified'].includes(item.status);
+    const canDelete = !['accepted', 'payment_submitted', 'payment_verified'].includes(item.status);
     const isReady = item.status === 'ready';
     const expired = new Date(item.expiresAt) < new Date();
 
@@ -123,6 +148,17 @@ export default function QuotesScreen() {
             <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} />
           </View>
         )}
+
+        {canDelete && (
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={() => handleDelete(item)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="trash-outline" size={14} color={Colors.error} />
+            <Text style={styles.deleteText}>Eliminar cotización</Text>
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
     );
   }
@@ -191,4 +227,18 @@ const styles = StyleSheet.create({
   ctaBtnText: { color: '#000', fontWeight: '700', fontSize: FontSize.sm },
   viewHint: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
   viewHintText: { fontSize: FontSize.xs, color: Colors.textMuted },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: Colors.error,
+    borderRadius: BorderRadius.sm,
+    paddingVertical: 8,
+    paddingHorizontal: Spacing.md,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  deleteText: { fontSize: FontSize.xs, color: Colors.error, fontWeight: '600' },
 });

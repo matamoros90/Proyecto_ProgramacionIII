@@ -14,6 +14,7 @@ router.get('/:id', ctrl.getOne);
 router.patch('/:id/confirm', ctrl.confirm);
 router.patch('/:id/accept', ctrl.clientAccept);
 router.post('/:id/payment', ctrl.clientPayment);
+router.delete('/:id/mine', ctrl.deleteQuoteByClient);
 
 // Vendedor / Admin
 router.post('/:id/followup', requireVendorOrAdmin, ctrl.vendorFollowup);

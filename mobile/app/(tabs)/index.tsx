@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated, View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Image, ActivityIndicator,
+  Image, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -133,6 +133,13 @@ export const CATEGORIES: CategoryItem[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 // Acciones Rápidas — scroll horizontal tipo Netflix
 // ─────────────────────────────────────────────────────────────────────────────
+// Dimensiones del item para el efecto Dock estilo macOS
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const QA_ITEM_WIDTH = 110;
+const QA_ITEM_GAP = 12;
+const QA_SLOT = QA_ITEM_WIDTH + QA_ITEM_GAP;
+const QA_SIDE_PADDING = (SCREEN_WIDTH - QA_ITEM_WIDTH) / 2;
+
 const QUICK_ACTIONS = [
   { id:'gaming',        label:'Gaming',       icon:'game-controller', color:'#EF4444', gradient:['#7F1D1D','#1C0A0A'] as [string,string] },
   { id:'programming',   label:'Programación', icon:'code-slash',      color:'#3B82F6', gradient:['#1E3A5F','#0B1929'] as [string,string] },
@@ -157,6 +164,8 @@ export default function HomeScreen() {
   const fadeAnim   = useRef(new Animated.Value(0)).current;
   const slideAnim  = useRef(new Animated.Value(24)).current;
   const scrollY    = useRef(new Animated.Value(0)).current;
+  // Scroll horizontal para efecto Dock estilo macOS en Acciones Rápidas
+  const qaScrollX  = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -337,38 +346,83 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Vista compacta: scroll horizontal */}
+          {/* Vista compacta: scroll horizontal con efecto Dock macOS */}
           {!showAll && (
-            <ScrollView
+            <Animated.ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.quickRow}
+              snapToInterval={QA_SLOT}
+              decelerationRate="fast"
+              snapToAlignment="center"
+              contentContainerStyle={{
+                paddingHorizontal: QA_SIDE_PADDING,
+                paddingVertical: Spacing.lg,
+                alignItems: 'center',
+              }}
+              onScroll={Animated.event(
+                [{ nativeEvent: { contentOffset: { x: qaScrollX } } }],
+                { useNativeDriver: true },
+              )}
+              scrollEventThrottle={16}
             >
-              {QUICK_ACTIONS.map((qa, i) => (
-                <TouchableOpacity
-                  key={i}
-                  onPress={() => router.push({ pathname: '/builder/preset', params: { category: qa.id } })}
-                  activeOpacity={0.82}
-                >
-                  <LinearGradient
-                    colors={qa.gradient}
-                    style={[
-                      s.quickCard,
-                      { borderColor: qa.color + '44' },
-                      isDark && { ...glowShadow(qa.color, 10, 0.30) },
-                    ]}
+              {QUICK_ACTIONS.map((qa, i) => {
+                const inputRange = [
+                  (i - 2) * QA_SLOT,
+                  (i - 1) * QA_SLOT,
+                  i       * QA_SLOT,
+                  (i + 1) * QA_SLOT,
+                  (i + 2) * QA_SLOT,
+                ];
+                const scale = qaScrollX.interpolate({
+                  inputRange,
+                  outputRange: [0.78, 0.92, 1.22, 0.92, 0.78],
+                  extrapolate: 'clamp',
+                });
+                const translateY = qaScrollX.interpolate({
+                  inputRange,
+                  outputRange: [4, 0, -12, 0, 4],
+                  extrapolate: 'clamp',
+                });
+                const opacity = qaScrollX.interpolate({
+                  inputRange,
+                  outputRange: [0.45, 0.7, 1, 0.7, 0.45],
+                  extrapolate: 'clamp',
+                });
+                return (
+                  <Animated.View
+                    key={i}
+                    style={{
+                      width: QA_ITEM_WIDTH,
+                      marginHorizontal: QA_ITEM_GAP / 2,
+                      opacity,
+                      transform: [{ scale }, { translateY }],
+                    }}
                   >
-                    <View style={[s.quickIcon, { backgroundColor: qa.color + '28' }]}>
-                      <Ionicons name={qa.icon as any} size={26} color={qa.color} />
-                    </View>
-                    <Text style={[s.quickLabel, { color: '#fff' }]} numberOfLines={2}>
-                      {qa.label}
-                    </Text>
-                    <View style={[s.quickLine, { backgroundColor: qa.color }]} />
-                  </LinearGradient>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                    <TouchableOpacity
+                      onPress={() => router.push({ pathname: '/builder/preset', params: { category: qa.id } })}
+                      activeOpacity={0.82}
+                    >
+                      <LinearGradient
+                        colors={qa.gradient}
+                        style={[
+                          s.quickCard,
+                          { borderColor: qa.color + '44' },
+                          isDark && { ...glowShadow(qa.color, 14, 0.40) },
+                        ]}
+                      >
+                        <View style={[s.quickIcon, { backgroundColor: qa.color + '28' }]}>
+                          <Ionicons name={qa.icon as any} size={26} color={qa.color} />
+                        </View>
+                        <Text style={[s.quickLabel, { color: '#fff' }]} numberOfLines={2}>
+                          {qa.label}
+                        </Text>
+                        <View style={[s.quickLine, { backgroundColor: qa.color }]} />
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </Animated.View>
+                );
+              })}
+            </Animated.ScrollView>
           )}
 
           {/* Vista expandida: tarjetas verticales grandes (estilo imagen 2) */}

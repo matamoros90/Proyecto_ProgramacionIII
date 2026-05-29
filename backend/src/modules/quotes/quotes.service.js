@@ -287,9 +287,24 @@ async function deleteQuote(quoteId, vendorId) {
   return { success: true };
 }
 
+// Cliente elimina su propia cotización (mientras no la haya aceptado o pagado)
+async function deleteByClient(quoteId, userId) {
+  const ref = getDb().collection(COLLECTION).doc(quoteId);
+  const doc = await ref.get();
+  if (!doc.exists) throw new Error('Cotización no encontrada');
+  const quote = doc.data();
+  if (quote.userId !== userId) throw new Error('Sin permisos sobre esta cotización');
+  const lockedStates = ['accepted', 'payment_submitted', 'payment_verified'];
+  if (lockedStates.includes(quote.status)) {
+    throw new Error('No puedes eliminar una cotización que ya aceptaste o pagaste');
+  }
+  await ref.delete();
+  return { success: true };
+}
+
 module.exports = {
   create, getByUser, getById, confirm, getAll,
   assignVendor, sendFollowup, markReady,
   acceptQuote, submitPayment, verifyPayment, getByVendor, claimQuote,
-  archiveQuote, deleteQuote,
+  archiveQuote, deleteQuote, deleteByClient,
 };

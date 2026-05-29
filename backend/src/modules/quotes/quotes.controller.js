@@ -146,9 +146,21 @@ async function deleteQuoteByVendor(req, res, next) {
   }
 }
 
+// Cliente: eliminar su propia cotización (mientras no la haya aceptado/pagado)
+async function deleteQuoteByClient(req, res, next) {
+  try {
+    const result = await service.deleteByClient(req.params.id, req.user.uid);
+    sendSuccess(res, result, 'Cotización eliminada');
+  } catch (err) {
+    const userErrors = ['Sin permisos', 'No puedes eliminar', 'no encontrada'];
+    if (userErrors.some(e => err.message.includes(e))) return sendError(res, 400, err.message);
+    next(err);
+  }
+}
+
 module.exports = {
   create, list, getOne, confirm,
   assignVendor, vendorFollowup, vendorMarkReady,
   clientAccept, clientPayment, verifyPayment, vendorQuotes, claimQuote,
-  archiveQuote, deleteQuoteByVendor,
+  archiveQuote, deleteQuoteByVendor, deleteQuoteByClient,
 };
