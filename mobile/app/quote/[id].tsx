@@ -139,8 +139,8 @@ export default function QuoteDetail() {
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={styles.btnGradient}
             >
-              <Ionicons name="thumbs-up-outline" size={20} color="#000" />
-              <Text style={styles.btnTextDark}>Aceptar cotización</Text>
+              <Ionicons name="card-outline" size={20} color="#000" />
+              <Text style={styles.btnTextDark}>Proceder al pago</Text>
             </LinearGradient>
           </TouchableOpacity>
         )}

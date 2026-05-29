@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { acceptQuote, submitPayment } from '../../services/orders.service';
+import { showAppDialog } from '../../components/AppDialog';
 import { Colors } from '../../constants/colors';
 import { Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { useAuth } from '../../hooks/useAuth';
@@ -121,11 +122,12 @@ export default function PaymentScreen() {
   }
 
   function showSuccess() {
-    Alert.alert(
-      '✅ Pago enviado',
-      'Tu comprobante fue recibido. El vendedor lo verificará y recibirás una notificación cuando sea aprobado.',
-      [{ text: 'Entendido', onPress: () => router.replace('/(tabs)/quotes' as any) }]
-    );
+    showAppDialog({
+      title: 'Pago enviado',
+      body: 'Tu comprobante fue recibido. El vendedor lo verificará y recibirás una notificación cuando sea aprobado.',
+      variant: 'success',
+      buttons: [{ text: 'Entendido', onPress: () => router.replace('/(tabs)/quotes' as any) }],
+    });
   }
 
   return (

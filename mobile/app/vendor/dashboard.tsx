@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import {
   getVendorQuotes, claimQuote, sendVendorFollowup, markQuoteReady, verifyQuotePayment,
-  archiveVendorQuote, deleteVendorQuote,
+  archiveVendorQuote, deleteVendorQuote, sendStageNotification, AssemblyStage,
 } from '../../services/orders.service';
 import type { Quote, QuoteStatus } from '../../types';
 import { Colors } from '../../constants/colors';
@@ -129,18 +129,18 @@ export default function VendorDashboard() {
 
   async function handleMarkReady(quoteId: string) {
     Alert.alert(
-      'Marcar como lista',
-      '¿La cotización está revisada y lista para que el cliente la acepte?',
+      'Aceptar cotización',
+      '¿Confirmas que aceptas esta cotización? Se notificará al cliente que su cotización fue aceptada.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Sí, marcar lista',
+          text: 'Sí, aceptar',
           onPress: async () => {
             setActionLoading(quoteId + '_ready');
             try {
               const updated = await markQuoteReady(quoteId);
               setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, status: updated.status } : q));
-              Alert.alert('✓ Cotización lista', 'El cliente recibió una notificación para revisarla.');
+              Alert.alert('✓ Cotización aceptada', 'El cliente recibió la notificación de que su cotización fue aceptada.');
             } catch (err: any) {
               Alert.alert('Error', err.message);
             } finally {
@@ -150,6 +150,18 @@ export default function VendorDashboard() {
         },
       ]
     );
+  }
+
+  async function handleStage(quoteId: string, stage: AssemblyStage, label: string) {
+    setActionLoading(quoteId + '_' + stage);
+    try {
+      await sendStageNotification(quoteId, stage);
+      Alert.alert(`✓ ${label}`, 'El cliente recibió la notificación de esta etapa.');
+    } catch (err: any) {
+      Alert.alert('Error', err.message);
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   async function handleArchive(quoteId: string) {
@@ -367,7 +379,7 @@ export default function VendorDashboard() {
                       >
                         <Ionicons name="checkmark-circle-outline" size={16} color={Colors.accent} />
                         <Text style={[styles.actionText, { color: Colors.accent }]}>
-                          {actionLoading === quote.id + '_ready' ? 'Marcando...' : 'Cotización lista'}
+                          {actionLoading === quote.id + '_ready' ? 'Enviando...' : 'Cotización aceptada'}
                         </Text>
                       </TouchableOpacity>
                     </>
@@ -398,8 +410,52 @@ export default function VendorDashboard() {
                         <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
                         <Text style={styles.verifiedText}>Pago verificado — orden creada</Text>
                       </View>
+
+                      <Text style={styles.stageHeader}>NOTIFICAR ETAPA AL CLIENTE</Text>
+
+                      <StageButton
+                        quoteId={quote.id}
+                        stage="components_ready"
+                        label="Componentes listos"
+                        icon="cube-outline"
+                        color="#06B6D4"
+                        emoji="📦"
+                        loading={actionLoading === quote.id + '_components_ready'}
+                        onPress={handleStage}
+                      />
+                      <StageButton
+                        quoteId={quote.id}
+                        stage="assembled"
+                        label="Ensamblado"
+                        icon="construct-outline"
+                        color="#8B5CF6"
+                        emoji="🔧"
+                        loading={actionLoading === quote.id + '_assembled'}
+                        onPress={handleStage}
+                      />
+                      <StageButton
+                        quoteId={quote.id}
+                        stage="software_installed"
+                        label="Software instalado"
+                        icon="albums-outline"
+                        color="#F59E0B"
+                        emoji="💿"
+                        loading={actionLoading === quote.id + '_software_installed'}
+                        onPress={handleStage}
+                      />
+                      <StageButton
+                        quoteId={quote.id}
+                        stage="ready_for_delivery"
+                        label="Listo para entrega"
+                        icon="rocket-outline"
+                        color="#10B981"
+                        emoji="🚚"
+                        loading={actionLoading === quote.id + '_ready_for_delivery'}
+                        onPress={handleStage}
+                      />
+
                       <TouchableOpacity
-                        style={[styles.actionBtn, { borderColor: Colors.textMuted }]}
+                        style={[styles.actionBtn, { borderColor: Colors.textMuted, marginTop: 4 }]}
                         onPress={() => handleArchive(quote.id)}
                         disabled={actionLoading === quote.id + '_archive'}
                       >
@@ -446,6 +502,43 @@ export default function VendorDashboard() {
   );
 }
 
+// ── Sub-componente: botón de etapa de ensamblaje ─────────────────────────────
+function StageButton({
+  quoteId, stage, label, icon, color, emoji, loading, onPress,
+}: {
+  quoteId: string;
+  stage: AssemblyStage;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  emoji: string;
+  loading: boolean;
+  onPress: (id: string, stage: AssemblyStage, label: string) => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={[
+        styles.stageBtn,
+        { borderColor: `${color}55`, backgroundColor: `${color}10` },
+        loading && { opacity: 0.5 },
+      ]}
+      onPress={() => onPress(quoteId, stage, label)}
+      disabled={loading}
+      activeOpacity={0.75}
+    >
+      <Text style={styles.stageEmoji}>{emoji}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.stageLabel, { color }]}>{label}</Text>
+      </View>
+      {loading ? (
+        <Text style={[styles.stageStatus, { color }]}>Enviando…</Text>
+      ) : (
+        <Ionicons name={icon} size={16} color={color} />
+      )}
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, backgroundColor: Colors.background },
@@ -461,6 +554,22 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.sm },
   sectionTitle: { fontSize: FontSize.md, fontWeight: '700', color: Colors.textPrimary },
   emptyBox: { alignItems: 'center', justifyContent: 'center', gap: Spacing.md, paddingVertical: Spacing.xl },
+
+  // Botones de etapa de ensamblaje
+  stageHeader: {
+    fontSize: 10, fontWeight: '800',
+    color: Colors.textMuted,
+    letterSpacing: 1, marginTop: 4, marginBottom: 2,
+  },
+  stageBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+  },
+  stageEmoji: { fontSize: 18 },
+  stageLabel: { fontSize: 13, fontWeight: '700' },
+  stageStatus: { fontSize: 11, fontWeight: '700' },
   emptyText: { color: Colors.textMuted, fontSize: FontSize.sm },
   card: { backgroundColor: Colors.surface, borderRadius: BorderRadius.md, padding: Spacing.md, borderWidth: 1, borderColor: Colors.border, gap: Spacing.sm },
   availableCard: { borderColor: Colors.primary, borderWidth: 1.5 },

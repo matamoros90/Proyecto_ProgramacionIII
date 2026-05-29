@@ -9,7 +9,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "https://gaming-innocent-dryer-conducted.trycloudflare.com/api"
+        "EXPO_PUBLIC_BACKEND_URL": "https://succeed-deputy-caring-suspension.trycloudflare.com/api"
       }
     },
     "production": {

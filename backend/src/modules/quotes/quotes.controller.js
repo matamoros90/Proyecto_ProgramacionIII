@@ -51,12 +51,26 @@ async function vendorFollowup(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// Vendedor: marcar cotización como lista
+// Vendedor: marcar cotización como aceptada
 async function vendorMarkReady(req, res, next) {
   try {
     const quote = await service.markReady(req.params.id, req.user.uid);
     if (!quote) return sendError(res, 403, 'Sin permisos o cotización no encontrada');
-    sendSuccess(res, quote, 'Cotización marcada como lista');
+    sendSuccess(res, quote, 'Cotización aceptada');
+  } catch (err) { next(err); }
+}
+
+// Vendedor: enviar notificación de etapa de ensamblaje
+async function vendorStageNotification(req, res, next) {
+  try {
+    const { stage } = req.body;
+    if (!stage) return sendError(res, 400, 'stage requerido');
+    if (!service.ASSEMBLY_STAGES[stage]) {
+      return sendError(res, 400, `Etapa inválida. Permitidas: ${Object.keys(service.ASSEMBLY_STAGES).join(', ')}`);
+    }
+    const result = await service.sendStageNotification(req.params.id, req.user.uid, stage);
+    if (!result) return sendError(res, 403, 'Sin permisos o cotización no encontrada');
+    sendSuccess(res, result, 'Notificación de etapa enviada');
   } catch (err) { next(err); }
 }
 
@@ -160,7 +174,7 @@ async function deleteQuoteByClient(req, res, next) {
 
 module.exports = {
   create, list, getOne, confirm,
-  assignVendor, vendorFollowup, vendorMarkReady,
+  assignVendor, vendorFollowup, vendorMarkReady, vendorStageNotification,
   clientAccept, clientPayment, verifyPayment, vendorQuotes, claimQuote,
   archiveQuote, deleteQuoteByVendor, deleteQuoteByClient,
 };

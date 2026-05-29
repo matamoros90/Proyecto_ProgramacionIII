@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Spacing, BorderRadius, FontSize, glowShadow } from '../../constants/theme';
+import { getUnreadCount } from '../../services/notifications.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipos exportados — usados por builder/preset.tsx
@@ -159,6 +160,7 @@ export default function HomeScreen() {
   const { profile, profileReady, isAdmin, isVendor, isAuthenticated, user } = useAuth();
   const insets = useSafeAreaInsets();
   const [showAll, setShowAll] = useState(false);
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
 
   // Animaciones de entrada
   const fadeAnim   = useRef(new Animated.Value(0)).current;
@@ -180,6 +182,16 @@ export default function HomeScreen() {
     if (isAdmin)  router.replace('/admin/dashboard');
     else if (isVendor) router.replace('/vendor/dashboard');
   }, [profileReady, isAdmin, isVendor]);
+
+  // Contador de notificaciones no leídas (refresca cada 30 s mientras el home esté visible)
+  useEffect(() => {
+    if (!isAuthenticated) { setUnreadNotifs(0); return; }
+    let active = true;
+    const refresh = () => getUnreadCount().then(c => { if (active) setUnreadNotifs(c); });
+    refresh();
+    const id = setInterval(refresh, 30000);
+    return () => { active = false; clearInterval(id); };
+  }, [isAuthenticated]);
 
   if (isAuthenticated && !profileReady) {
     return (
@@ -545,9 +557,13 @@ function BuilderCard({
         {/* Imagen de fondo */}
         <Image source={{ uri: image }} style={s.builderImg} resizeMode="cover" />
 
-        {/* Overlay degradado */}
+        {/* Overlay degradado — translúcido para que la imagen de fondo se vea */}
         <LinearGradient
-          colors={[gradientColors[0] + 'CC', gradientColors[1], gradientColors[2]]}
+          colors={[
+            gradientColors[0] + '55',  // 33% opaque arriba → imagen visible
+            gradientColors[1] + '77',  // 47% en el medio
+            gradientColors[2] + 'B0',  // 69% abajo → contraste para texto
+          ]}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />

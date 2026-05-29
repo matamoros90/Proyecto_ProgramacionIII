@@ -19,6 +19,7 @@ router.delete('/:id/mine', ctrl.deleteQuoteByClient);
 // Vendedor / Admin
 router.post('/:id/followup', requireVendorOrAdmin, ctrl.vendorFollowup);
 router.patch('/:id/ready', requireVendorOrAdmin, ctrl.vendorMarkReady);
+router.post('/:id/stage', requireVendorOrAdmin, ctrl.vendorStageNotification);
 router.patch('/:id/verify-payment', requireVendorOrAdmin, ctrl.verifyPayment);
 
 // Vendedor: tomar cotización disponible

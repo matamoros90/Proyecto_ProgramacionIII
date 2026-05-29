@@ -76,6 +76,16 @@ export async function markQuoteReady(quoteId: string): Promise<Quote> {
   return (res as any).data;
 }
 
+export type AssemblyStage =
+  | 'components_ready'
+  | 'assembled'
+  | 'software_installed'
+  | 'ready_for_delivery';
+
+export async function sendStageNotification(quoteId: string, stage: AssemblyStage): Promise<void> {
+  await api.post(`/quotes/${quoteId}/stage`, { stage });
+}
+
 export async function verifyQuotePayment(quoteId: string): Promise<{ orderId: string }> {
   const res = await api.patch(`/quotes/${quoteId}/verify-payment`);
   return (res as any).data;

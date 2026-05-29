@@ -18,7 +18,10 @@
         "expo-notifications",
         {
           "icon": "./assets/images/notification-icon.png",
-          "color": "#00D4FF",
+          "color": "#3B82F6",
+          "defaultChannel": "default",
+          "androidMode": "default",
+          "androidCollapsedTitle": "ZonaPc Builder",
           "sounds": []
         }
       ],
@@ -44,7 +47,13 @@
         "backgroundColor": "#0A1223"
       },
       "package": "com.zonapc.builder",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "POST_NOTIFICATIONS",
+        "VIBRATE",
+        "WAKE_LOCK",
+        "RECEIVE_BOOT_COMPLETED"
+      ]
     },
     "ios": {
       "supportsTablet": false,
@@ -56,14 +65,11 @@
       "favicon": "./assets/images/favicon.png"
     },
     "updates": {
-      "enabled": false
+      "enabled": false,
+      "checkAutomatically": "NEVER"
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "a5e2b6a2-7e66-4584-9204-d0498a81468c"
-      }
-    },
-    "owner": "matamoros"
+      "router": {}
+    }
   }
 }

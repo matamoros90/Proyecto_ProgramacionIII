@@ -111,7 +111,7 @@ async function sendFollowup(quoteId, vendorId) {
   return { success: true };
 }
 
-// Vendedor marca cotización como lista → notifica al cliente
+// Vendedor marca cotización como aceptada → notifica al cliente
 async function markReady(quoteId, vendorId) {
   const ref = getDb().collection(COLLECTION).doc(quoteId);
   const doc = await ref.get();
@@ -122,17 +122,66 @@ async function markReady(quoteId, vendorId) {
   await ref.update({ status: 'ready', readyAt: new Date().toISOString() });
 
   await sendToUser(quote.userId, {
-    title: '✅ ¡Tu cotización está lista!',
-    body: 'Hemos revisado tu cotización. Entra a la app para verla y aceptarla.',
-    data: { quoteId, type: 'quote_ready' },
+    title: '✅ ¡Tu cotización fue aceptada!',
+    body: 'Tu cotización fue aceptada. Entra a la app para revisarla y proceder al pago.',
+    data: { quoteId, type: 'quote_accepted' },
   });
   await saveNotification(quote.userId, {
-    title: '✅ ¡Tu cotización está lista!',
-    body: 'Entra a la app para ver tu cotización y aceptarla.',
-    type: 'quote_ready',
+    title: '✅ ¡Tu cotización fue aceptada!',
+    body: 'Tu cotización fue aceptada. Entra a la app para revisarla y proceder al pago.',
+    type: 'quote_accepted',
     orderId: quoteId,
   });
   return { id: quoteId, ...quote, status: 'ready' };
+}
+
+// ─── Etapas de ensamblaje (post payment_verified) ────────────────────────────
+// Notifican al cliente sin cambiar el estado de la cotización.
+const ASSEMBLY_STAGES = {
+  components_ready: {
+    title: '📦 Tus componentes están listos',
+    body:  'Recibimos y verificamos todos los componentes de tu PC. Comenzaremos el ensamblaje.',
+    type:  'order_components_ready',
+  },
+  assembled: {
+    title: '🔧 ¡Tu PC ya está ensamblada!',
+    body:  'Terminamos de armar físicamente tu computadora. Sigue la instalación del software.',
+    type:  'order_assembled',
+  },
+  software_installed: {
+    title: '💿 Software instalado',
+    body:  'Tu PC ya tiene el sistema operativo y los drivers configurados. Casi lista para entrega.',
+    type:  'order_software_installed',
+  },
+  ready_for_delivery: {
+    title: '🚚 ¡Lista para entrega!',
+    body:  'Tu PC está empacada y lista. Pronto coordinaremos la entrega contigo.',
+    type:  'order_ready_for_delivery',
+  },
+};
+
+// Vendedor envía notificación de etapa de ensamblaje → notifica al cliente
+async function sendStageNotification(quoteId, vendorId, stage) {
+  const stageData = ASSEMBLY_STAGES[stage];
+  if (!stageData) return { error: 'INVALID_STAGE' };
+
+  const doc = await getDb().collection(COLLECTION).doc(quoteId).get();
+  if (!doc.exists) return null;
+  const quote = doc.data();
+  if (quote.vendorId !== vendorId) return null;
+
+  await sendToUser(quote.userId, {
+    title: stageData.title,
+    body:  stageData.body,
+    data:  { quoteId, type: stageData.type, stage },
+  });
+  await saveNotification(quote.userId, {
+    title: stageData.title,
+    body:  stageData.body,
+    type:  stageData.type,
+    orderId: quoteId,
+  });
+  return { success: true, stage };
 }
 
 // Cliente acepta cotización + registra dirección de entrega
@@ -304,7 +353,8 @@ async function deleteByClient(quoteId, userId) {
 
 module.exports = {
   create, getByUser, getById, confirm, getAll,
-  assignVendor, sendFollowup, markReady,
+  assignVendor, sendFollowup, markReady, sendStageNotification,
   acceptQuote, submitPayment, verifyPayment, getByVendor, claimQuote,
   archiveQuote, deleteQuote, deleteByClient,
+  ASSEMBLY_STAGES,
 };

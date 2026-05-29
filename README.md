@@ -1094,6 +1094,271 @@ Beneficios:
 
 ---
 
+## Actualización — 29 de Mayo 2026 (Otto, sesión tarde)
+
+### Centro educativo "Aprende Hardware", notificaciones por etapa, heads-up push notifications, lista de notificaciones y rediseño de tab bar/dialog
+
+Esta actualización agrega un **mini-centro educativo** dentro de la app, completa el flujo de notificaciones del cliente (en banda y push real estilo WhatsApp), introduce **etapas de ensamblaje** que el vendedor notifica manualmente, y rediseña dos componentes clave del UI: la barra de navegación inferior y los diálogos modales.
+
+---
+
+### 1. Sección "Aprende Hardware" (`mobile/app/(tabs)/aprende.tsx` + `mobile/app/aprende/`)
+
+Nuevo tab `Aprende` (entre "Mis Órdenes" y "Cesta") que abre un mini centro educativo para usuarios principiantes.
+
+**Hub principal** — tarjetas premium con gradientes neón únicos por categoría, animaciones spring de entrada escalonadas:
+
+| Categoría | Contenido | Estilo |
+|-----------|-----------|--------|
+| Conceptos Básicos | 10 lecciones expandibles (CPU, RAM, GPU, SSD, HDD vs SSD, DDR, MB, PSU, Socket, Bottleneck) | Gradiente azul → violeta |
+| PCs según el uso | 6 perfiles (Gaming, Programación, Diseño, Streaming, Oficina, Estudiantil) con specs, presupuesto, software ideal | Gradiente ámbar → rojo |
+| Comparativas | 6 versus cara a cara con barras de rendimiento, pros/cons, veredicto | Gradiente cian → azul |
+| Errores comunes | 8 tips clasificados (Crítico / Importante / Recomendado) con problema + fix | Gradiente rojo → naranja |
+| Compatibilidad interactiva | 6 casos reales con visual de conexión, explicación y solución | Gradiente verde → cian |
+
+**Diseño:**
+- Cards con glassmorphism (`rgba(255,255,255,0.04)` + border sutil)
+- Emojis grandes (estilo Discord/Steam)
+- `LayoutAnimation` para expandir/colapsar lecciones suavemente
+- Barras de rendimiento animadas en comparativas
+- Visual de conexión rota/exitosa entre componentes
+
+| Archivo nuevo | Descripción |
+|---------------|-------------|
+| `mobile/app/(tabs)/aprende.tsx` | Hub con grid de 5 categorías animadas |
+| `mobile/app/aprende/basicos.tsx` | 10 lecciones expandibles |
+| `mobile/app/aprende/usos.tsx` | 6 perfiles de uso con specs detallados |
+| `mobile/app/aprende/comparativas.tsx` | 6 versus con barras de performance |
+| `mobile/app/aprende/errores.tsx` | 8 errores con niveles de severidad |
+| `mobile/app/aprende/compatibilidad.tsx` | 6 casos interactivos con visual de conexión |
+
+---
+
+### 2. Notificaciones de etapa de ensamblaje (vendedor → cliente)
+
+El vendedor ahora puede notificar al cliente el progreso del ensamblaje de su PC desde el dashboard, **sin cambiar el estado de la cotización**.
+
+**Renombre semántico:**
+- Botón "Cotización lista" → **"Cotización aceptada"**
+- Mensaje al cliente: "✅ ¡Tu cotización fue aceptada!" / "Tu cotización fue aceptada. Entra a la app para revisarla y proceder al pago."
+
+**4 nuevas etapas** (aparecen en `quote.status === 'payment_verified'`, antes del botón "Archivar"):
+
+| Botón | Icono | Color | Notificación enviada |
+|-------|-------|-------|----------------------|
+| 📦 Componentes listos | `cube-outline` | Cian (#06B6D4) | "Recibimos y verificamos todos los componentes de tu PC. Comenzaremos el ensamblaje." |
+| 🔧 Ensamblado | `construct-outline` | Violeta (#8B5CF6) | "Terminamos de armar físicamente tu computadora. Sigue la instalación del software." |
+| 💿 Software instalado | `albums-outline` | Ámbar (#F59E0B) | "Tu PC ya tiene el sistema operativo y los drivers configurados." |
+| 🚚 Listo para entrega | `rocket-outline` | Verde (#10B981) | "Tu PC está empacada y lista. Pronto coordinaremos la entrega contigo." |
+
+**Backend:**
+- Nueva ruta: `POST /api/quotes/:id/stage` (vendor/admin only) con body `{ stage: '...' }`
+- Diccionario `ASSEMBLY_STAGES` exportado en `quotes.service.js`
+- Validación: vendor debe ser el dueño de la cotización; stage debe ser válido
+
+**Mobile:**
+- `sendStageNotification(quoteId, stage)` en `services/orders.service.ts`
+- Sub-componente `<StageButton>` reutilizable en `vendor/dashboard.tsx`
+
+---
+
+### 3. Heads-up push notifications estilo WhatsApp/Telegram
+
+Las notificaciones ahora aparecen **flotando en la parte superior** del teléfono (heads-up) con sonido y vibración, no solo en la bandeja.
+
+**Backend** (`backend/src/modules/notifications/notifications.service.js`) — payload FCM ampliado:
+```js
+android: {
+  priority: 'high',                      // entrega inmediata
+  notification: {
+    channelId: 'default',
+    notificationPriority: 'PRIORITY_MAX',
+    sound: 'default',                    // obligatorio para heads-up
+    defaultVibrateTimings: true,
+    defaultLightSettings: true,
+    visibility: 'public',                // visible en lock screen
+  },
+},
+apns: {
+  headers: { 'apns-priority': '10' },
+  payload: { aps: { sound: 'default', 'mutable-content': 1 } },
+},
+```
+Plus serialización forzada de `data` a strings (requisito de FCM).
+
+**Mobile** (`app/_layout.tsx`):
+- `setNotificationHandler` → heads-up también cuando la app está abierta
+- Canal `default` ampliado con `sound: 'default'`, `enableLights`, `lightColor`, `lockscreenVisibility: PUBLIC`, `showBadge`
+- `requestPermissionsAsync` adaptado a Android 13+ (POST_NOTIFICATIONS)
+
+**`mobile/app.json`:**
+- Permisos Android declarados: `POST_NOTIFICATIONS`, `VIBRATE`, `WAKE_LOCK`, `RECEIVE_BOOT_COMPLETED`
+- Plugin `expo-notifications`: `defaultChannel: "default"` + `androidCollapsedTitle: "ZonaPc Builder"`
+
+> **Nota:** Esto solo funciona en **APK nativo (EAS Build)**. Expo Go no soporta FCM push remoto desde SDK 53+.
+
+---
+
+### 4. Pantalla de notificaciones del cliente + bell icon funcional
+
+La campana del header de Inicio (que antes no hacía nada) ahora abre una **lista completa de notificaciones** que el usuario ha recibido.
+
+**Backend nuevo** — módulo independiente registrado en `/api/notifications`:
+
+| Endpoint | Acción |
+|----------|--------|
+| `GET /api/notifications` | Lista las del usuario (últimas 100, ordenadas por fecha desc.) |
+| `GET /api/notifications/unread` | Cuenta de no leídas |
+| `PATCH /api/notifications/:id/read` | Marcar una leída |
+| `PATCH /api/notifications/read-all` | Marcar todas leídas (batch atómico) |
+| `DELETE /api/notifications/:id` | Eliminar una |
+
+| Archivo nuevo | Descripción |
+|---------------|-------------|
+| `backend/src/modules/notifications/notifications.controller.js` | Handlers de 5 endpoints |
+| `backend/src/modules/notifications/notifications.routes.js` | Router con `authenticate` middleware |
+
+Service ampliado con `listByUser`, `countUnread`, `markRead`, `markAllRead`, `remove`.
+
+**Mobile nuevo:**
+- `services/notifications.service.ts` — cliente API con tipo `AppNotification`
+- `app/notifications.tsx` — pantalla premium con:
+  - Header con contador de no leídas y botón "Leer todas"
+  - Cards con ícono+color por tipo (10 tipos mapeados: `quote_accepted`, `order_components_ready`, `order_assembled`, etc.)
+  - Punto luminoso + glow shadow en las no leídas
+  - **Tap** = abre cotización/orden + marca leída
+  - **Long press** = eliminar con confirmación
+  - Pull-to-refresh
+  - Empty state ilustrado
+
+**Inicio (`(tabs)/index.tsx`):**
+- Campana ahora navega a `/notifications`
+- Estado `unreadNotifs` con polling cada 30s al endpoint `/notifications/unread`
+- El punto rojo del badge solo aparece si hay no leídas (antes era estático)
+
+---
+
+### 5. Cambios menores de copy
+
+| Pantalla | Antes | Ahora |
+|----------|-------|-------|
+| `(tabs)/quotes.tsx` | 👁 Ver y aceptar cotización | 🚀 Tu próxima PC te está esperando |
+| `quote/[id].tsx` | 👍 Aceptar cotización | 💳 Proceder al pago |
+
+---
+
+### 6. Barra de navegación inferior rediseñada (`mobile/components/CustomTabBar.tsx`)
+
+Se reemplazó el `Tabs.tabBar` por defecto por un componente custom estilo **pill**, sin elementos flotantes problemáticos.
+
+**Diseño:**
+- Barra pill (stadium-shape) de 64px de altura
+- Tab activo: ícono en color primario + label visible al lado + punto indicador pequeño + leve escala (1.05x) con spring
+- Tabs inactivos: solo ícono en blanco al 55% (o gris al 55% en light)
+- Adaptativo al tema:
+
+| Tema | Wrapper bg | Pill bg | Íconos inactivos | Sombra |
+|------|------------|---------|------------------|--------|
+| Dark | `colors.background` (`#0B0F17`) | `#0D1320` | blanco 55% | negra 40% |
+| Light | `colors.background` (`#F4F6F8`) | `#FFFFFF` | gris oscuro 55% | gris suave 12% |
+
+**Filtro doble** para excluir rutas internas como `builder`:
+```tsx
+const HIDDEN_ROUTES = new Set(['builder']);
+// + descriptor.options.href !== null como respaldo
+```
+
+**Animaciones:**
+- `Animated.spring` para escala del activo
+- `Animated.timing` para fade-in del indicador
+
+---
+
+### 7. Sistema de diálogos premium (`mobile/components/AppDialog.tsx`)
+
+Componente nuevo que reemplaza visualmente el blanco-genérico de `Alert.alert` con un modal centrado de estilo premium.
+
+**API imperativa** (similar a `Alert.alert` para minimizar cambios en call-sites):
+```tsx
+showAppDialog({
+  title: 'Pago enviado',
+  body: 'Tu comprobante fue recibido...',
+  variant: 'success',  // info | success | error | warning
+  buttons: [{ text: 'Entendido', onPress: () => router.replace(...) }],
+});
+```
+
+**Diseño:**
+- Backdrop oscuro al 65% con tap-to-dismiss
+- Card central `#151A23`, border-radius 24, shadow profunda
+- **Burbuja ícono flotante** en esquina superior derecha con gradiente único por variant + glow shadow (entra con spring desde arriba)
+- Flecha decorativa apuntando a la burbuja
+- Botón primario con gradiente full-width; botones secundarios con glassmorphism
+- Animación de entrada: scale + fade + sweep
+
+**4 variants** con paletas distintas: `info`, `success`, `error`, `warning`.
+
+**Montaje:** `<DialogHost />` en `app/_layout.tsx` — siempre disponible vía `showAppDialog(...)` sin prop drilling.
+
+**Primer reemplazo aplicado:** el Alert nativo blanco de "Pago enviado" en `quote/payment.tsx` ahora usa el nuevo dialog con variant `success`.
+
+---
+
+### 8. Mejora visual de las cards "Armar PC" del Inicio
+
+Las tarjetas "PC por Presupuesto" y "Armado Personalizado" tenían imágenes de fondo casi imperceptibles (overlay al 80%+ las cubría). Se redujo la opacidad del overlay para que las fotos respiren:
+
+| Zona | Antes | Ahora |
+|------|-------|-------|
+| Arriba (badge) | 80% opaco | **33%** ← imagen muy visible |
+| Centro | 100% sólido | **47%** ← imagen visible |
+| Abajo (título) | 100% sólido | **69%** ← contraste suficiente para texto |
+
+Los badges y el icono+título mantienen sus propios contenedores con border, así que la legibilidad no se compromete.
+
+---
+
+### Resumen de archivos modificados / creados — 29 de Mayo 2026
+
+**Nuevos:**
+
+| Archivo | Tipo |
+|---------|------|
+| `mobile/app/(tabs)/aprende.tsx` | Hub educativo |
+| `mobile/app/aprende/basicos.tsx` | Lecciones |
+| `mobile/app/aprende/usos.tsx` | Perfiles |
+| `mobile/app/aprende/comparativas.tsx` | Versus |
+| `mobile/app/aprende/errores.tsx` | Tips |
+| `mobile/app/aprende/compatibilidad.tsx` | Casos |
+| `mobile/app/notifications.tsx` | Lista de notificaciones del cliente |
+| `mobile/components/CustomTabBar.tsx` | Tab bar pill adaptativo |
+| `mobile/components/AppDialog.tsx` | Modal premium + `showAppDialog()` |
+| `mobile/services/notifications.service.ts` | Cliente API de notifications |
+| `backend/src/modules/notifications/notifications.controller.js` | Handlers REST |
+| `backend/src/modules/notifications/notifications.routes.js` | Router |
+
+**Modificados:**
+
+| Archivo | Cambio |
+|---------|--------|
+| `backend/src/config/app.js` | Registro de `/api/notifications` |
+| `backend/src/modules/notifications/notifications.service.js` | Heads-up payload + 5 funciones de consulta |
+| `backend/src/modules/quotes/quotes.controller.js` | `vendorStageNotification` handler |
+| `backend/src/modules/quotes/quotes.routes.js` | Ruta `POST /:id/stage` |
+| `backend/src/modules/quotes/quotes.service.js` | `ASSEMBLY_STAGES` + `sendStageNotification` + renombre `markReady` |
+| `mobile/app.json` | Permisos Android + plugin notifications mejorado + `extra` limpio para Expo Go |
+| `mobile/eas.json` | Backend URL actualizada en perfil preview |
+| `mobile/app/(tabs)/_layout.tsx` | Uso de `CustomTabBar` + tab `aprende` |
+| `mobile/app/(tabs)/index.tsx` | Bell funcional + contador `unreadNotifs` + opacity de cards |
+| `mobile/app/(tabs)/quotes.tsx` | Botón "Tu próxima PC te está esperando" |
+| `mobile/app/_layout.tsx` | `DialogHost` + `setNotificationHandler` + canal heads-up + rutas |
+| `mobile/app/quote/[id].tsx` | Botón "Proceder al pago" |
+| `mobile/app/quote/payment.tsx` | `showAppDialog` para confirmación de pago |
+| `mobile/app/vendor/dashboard.tsx` | 4 botones de etapa + renombre "Cotización aceptada" |
+| `mobile/services/orders.service.ts` | `sendStageNotification` + type `AssemblyStage` |
+
+---
+
 ## Guía de inicio para compañeros del equipo
 
 > Requisito previo: tener Node.js 18+ y la app **Expo Go** instalada en el teléfono.

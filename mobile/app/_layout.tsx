@@ -9,6 +9,7 @@ import { auth } from '../services/firebase.config';
 import { useAuthStore } from '../stores/authStore';
 import api, { loadBackendUrlFromStorage } from '../services/api';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
+import { DialogHost } from '../components/AppDialog';
 
 // Hidratar URL del backend desde AsyncStorage antes de cualquier request
 loadBackendUrlFromStorage();
@@ -68,14 +69,45 @@ export default function RootLayout() {
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const N = require('expo-notifications') as typeof import('expo-notifications');
+
+        // ── Foreground: que la notificación se muestre como heads-up ────────
+        // Sin esto, Android suprime las notificaciones cuando la app está abierta.
+        N.setNotificationHandler({
+          handleNotification: async () => ({
+            shouldShowBanner: true,
+            shouldShowList:   true,
+            shouldPlaySound:  true,
+            shouldSetBadge:   true,
+          }),
+        });
+
+        // ── Canal Android: IMPORTANCE_MAX + sonido + visibilidad pública ────
+        // Estos parámetros son obligatorios para que aparezcan como heads-up
+        // (estilo WhatsApp/Telegram) en Android 8.0+
         if (Platform.OS === 'android') {
           await N.setNotificationChannelAsync('default', {
-            name: 'ZonaPc Builder',
-            importance: N.AndroidImportance.MAX,
+            name: 'Actualizaciones de ZonaPc',
+            description: 'Cotizaciones, etapas de ensamblaje y entregas',
+            importance: N.AndroidImportance.MAX,         // heads-up
+            sound: 'default',                             // requerido para heads-up
             vibrationPattern: [0, 250, 250, 250],
+            enableVibrate: true,
+            enableLights: true,
+            lightColor: '#3B82F6',
+            lockscreenVisibility: N.AndroidNotificationVisibility.PUBLIC,
+            showBadge: true,
+            bypassDnd: false,
           });
         }
-        const { status } = await N.requestPermissionsAsync();
+
+        // ── Permiso POST_NOTIFICATIONS (Android 13+ / iOS) ──────────────────
+        const { status } = await N.requestPermissionsAsync({
+          ios: {
+            allowAlert: true,
+            allowBadge: true,
+            allowSound: true,
+          },
+        });
         if (status !== 'granted') return;
         const tokenData = await N.getDevicePushTokenAsync();
         if (tokenData?.data) {
@@ -143,7 +175,15 @@ function ThemedRoot() {
         <Stack.Screen name="vendor/dashboard" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="dev-config" />
+        <Stack.Screen name="aprende/basicos" />
+        <Stack.Screen name="aprende/usos" />
+        <Stack.Screen name="aprende/comparativas" />
+        <Stack.Screen name="aprende/errores" />
+        <Stack.Screen name="aprende/compatibilidad" />
+        <Stack.Screen name="notifications" />
       </Stack>
+      {/* Host global del AppDialog — siempre montado, listo para showAppDialog(...) */}
+      <DialogHost />
     </>
   );
 }

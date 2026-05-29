@@ -118,8 +118,8 @@ export default function QuotesScreen() {
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={styles.ctaBtnGradient}
             >
-              <Ionicons name="eye-outline" size={16} color="#000" />
-              <Text style={styles.ctaBtnText}>Ver y aceptar cotización</Text>
+              <Ionicons name="rocket-outline" size={16} color="#000" />
+              <Text style={styles.ctaBtnText}>Tu próxima PC te está esperando</Text>
             </LinearGradient>
           </TouchableOpacity>
         )}

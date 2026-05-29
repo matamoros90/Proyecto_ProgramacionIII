@@ -13,6 +13,7 @@ const quotesRoutes = require('../modules/quotes/quotes.routes');
 const ordersRoutes = require('../modules/orders/orders.routes');
 const adminRoutes = require('../modules/admin/admin.routes');
 const tutorialsRoutes = require('../modules/tutorials/tutorials.routes');
+const notificationsRoutes = require('../modules/notifications/notifications.routes');
 const { errorHandler } = require('../middleware/error.middleware');
 
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
@@ -66,6 +67,7 @@ function createApp() {
   app.use('/api/orders', ordersRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/tutorials', tutorialsRoutes);
+  app.use('/api/notifications', notificationsRoutes);
 
   app.use(errorHandler);
 
