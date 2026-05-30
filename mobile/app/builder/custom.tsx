@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, Alert, Image,
@@ -40,8 +40,14 @@ function ComponentThumb({
 }
 
 export default function CustomBuilderScreen() {
-  const { build, compatibility, totalPrice, category, recommendation } = useBuilder();
+  const { build, compatibility, totalPrice, category, setCategory, recommendation } = useBuilder();
   const [saving, setSaving] = useState(false);
+
+  // Si el usuario llegó desde "Armado Personalizado" sin pasar por presupuesto/preset,
+  // la categoría queda null. Asigna una por defecto para que pueda cotizar.
+  useEffect(() => {
+    if (!category) setCategory('gaming');
+  }, [category, setCategory]);
 
   const hasErrors = (compatibility?.errors?.length ?? 0) > 0;
   const hasWarnings = (compatibility?.warnings?.length ?? 0) > 0;
