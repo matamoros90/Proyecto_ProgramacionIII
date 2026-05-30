@@ -4,7 +4,7 @@ import { auth } from './firebase.config';
 import Constants from 'expo-constants';
 
 const STORAGE_KEY = '@zonapc/backend_url';
-const RAILWAY_URL = 'https://zonapc-backend-production.up.railway.app/api';
+const RAILWAY_URL = 'https://proyectoprogramacioniii-production.up.railway.app/api';
 
 function resolveDefaultBackendUrl(): string {
   // 1. Variable de entorno seteada en build time (start-dev.sh la inyecta)
