@@ -1359,6 +1359,42 @@ Los badges y el icono+título mantienen sus propios contenedores con border, as�
 
 ---
 
+## Actualización — 30 de Mayo 2026 (sesión tarde)
+
+### 3 bugs corregidos tras integrar trabajo de Otto
+
+| # | Bug | Causa | Fix |
+|---|---|---|---|
+| 1 | Vendor/Admin veían la pantalla del cliente | **Tunnel cloudflared** se desconectaba (el gratuito tiene baja confiabilidad). Sin backend, `GET /auth/profile` falla → `profile = null` → `isAdmin/isVendor = false` → no se dispara el redirect en `(tabs)/index.tsx`. El código de roles y los datos en Firestore están correctos. | Reiniciar tunnel cuando falla, o usar dev-config para apuntar a una URL nueva. **Solución a largo plazo: desplegar backend en Railway/Render con URL fija**. |
+| 2 | "Armado Personalizado" no permitía cotizar — error "Selecciona una categoría primero" | La `category` del builderStore solo se setea cuando el usuario entra desde `/builder/budget` o `/builder/preset`. Si entra directo desde Home > "Armado Personalizado", queda `null`. | `mobile/app/builder/custom.tsx`: `useEffect` asigna `'gaming'` por defecto si no hay categoría. El usuario ya puede cotizar inmediatamente. |
+| 3 | Teclado tapaba el campo de referencia/boleta en pago bancario | `payment.tsx` usaba `ScrollView` sin `KeyboardAvoidingView`. | Envolver con `KeyboardAvoidingView` (behavior `padding` iOS / `height` Android) + `paddingBottom: 80` en el contentContainer. Mismo fix que ya estaba aplicado en `login.tsx`. |
+
+### Tras integrar dev/otto (commit `dd8b118`)
+
+Otto trajo features grandes (Aprende Hardware, notificaciones por etapa, lista de notif, tab bar custom, AppDialog). El pull fue fast-forward limpio pero borró sin querer dos campos de `app.json` que EAS Build necesita:
+
+- `owner: "matamoros"`
+- `extra.eas.projectId: "a5e2b6a2-7e66-4584-9204-d0498a81468c"`
+
+Y la URL del tunnel en `eas.json` apuntaba al cloudflared de Otto que ya expiró. Restaurado todo en commit `eecdb5b`.
+
+### Cuentas de prueba (sin cambio)
+
+| Rol | Email | Password |
+|---|---|---|
+| Administrador | `admin@zonapc.gt` | `Admin1234` |
+| Vendedor | `vendedor@zonapc.gt` | `Vendedor2026` |
+| Vendedora (creada desde panel) | `rashel@zonapc.gt` | (asignada al registrar) |
+
+> **Cómo verificar el rol de un usuario:** `cd backend && node -e "require('dotenv').config(); const {initFirebase, getDb} = require('./src/config/firebase'); initFirebase(); getDb().collection('users').get().then(s => { s.docs.forEach(d => console.log(d.data().email, '→', d.data().role)); process.exit(0); });"`
+
+### Pendiente (no urgente)
+
+- **Tab bar condicional por rol** — actualmente todos los roles ven las mismas 5 tabs (Inicio, Cotizaciones, Mis Órdenes, Aprende, Cesta). El admin/vendor solo se redirige al entrar a "Inicio" — si tocan otra tab antes, ven la pantalla del cliente. Arreglo: filtrar `Tabs.Screen` por `useAuth().isAdmin / isVendor` en `(tabs)/_layout.tsx`. Trabajo: ~30 min.
+- **Backend en Railway** — eliminaría dependencia de tunnel cloudflared. Mientras tanto, el APK tiene la pantalla `dev-config` (long-press logo o botón "Configurar servidor" en login) para cambiar la URL sin recompilar.
+
+---
+
 ## Guía de inicio para compañeros del equipo
 
 > Requisito previo: tener Node.js 18+ y la app **Expo Go** instalada en el teléfono.
